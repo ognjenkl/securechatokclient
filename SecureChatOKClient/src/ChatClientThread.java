@@ -22,7 +22,7 @@ import org.json.JSONObject;
 
 public class ChatClientThread extends Thread {
 
-	Socket socket;
+	//Socket socket;
 	PrintWriter out;
 	
 	JFrame frame;// = null;
@@ -34,25 +34,34 @@ public class ChatClientThread extends Thread {
 	JLabel labelFrom;
 	JLabel labelTo;
 	
-	String localClient;
+	//String localClient;
 	String remoteClient;
 	String message;
 	
 	//remote clients to which this client is in communication with, and it is also in the list
 	//so when it's closed, it's removed form list on widnow close operation
-	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
+	//ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
 	
-	public ChatClientThread(Socket socket, String remoteClient, String localClient, String message, ConcurrentHashMap<String, ChatClientThread> remoteClients){
-		this.socket = socket;
+//	public ChatClientThread(Socket socket, String remoteClient, String localClient, String message, ConcurrentHashMap<String, ChatClientThread> remoteClients){
+//		this.socket = socket;
+//		this.remoteClient = remoteClient;
+//		this.localClient = localClient;
+//		this.message = message;
+//		this.remoteClientsInCommunication = remoteClients;
+//	}
+	
+	public ChatClientThread( String remoteClient, String message){
+		//this.socket = socket;
 		this.remoteClient = remoteClient;
-		this.localClient = localClient;
+		//this.localClient = localClient;
 		this.message = message;
-		this.remoteClientsInCommunication = remoteClients;
+		//this.remoteClientsInCommunication = remoteClients;
 	}
 	
 	public void run(){
 			try {
-				out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())),true);
+				//out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())),true);
+				out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
 				
 			if(frame == null)
 					startGUI();
@@ -76,7 +85,8 @@ public class ChatClientThread extends Thread {
 		messageHistory = new JTextArea();
 		messageTextField = new JTextField();
 		send = new JButton("Send");
-		labelFrom = new JLabel("User: " + localClient);
+		//labelFrom = new JLabel("User: " + localClient);
+		labelFrom = new JLabel("User: " + ChatClient.getInstance().getUsername());
 		labelTo = new JLabel("Remote user: " + remoteClient);
 		
         
@@ -109,8 +119,10 @@ public class ChatClientThread extends Thread {
             public void actionPerformed(ActionEvent e) {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		message = messageTextField.getText();
-            		sendMessageAsJson(remoteClient, localClient, "chat", message);
-            		writeToHistory(localClient, message);
+            		//sendMessageAsJson(remoteClient, localClient, "chat", message);
+            		sendMessageAsJson(remoteClient, ChatClient.getInstance().getUsername(), "chat", message);
+            		//writeToHistory(localClient, message);
+            		writeToHistory(ChatClient.getInstance().getUsername(), message);
             		messageTextField.setText("");
             	}
             }
@@ -120,7 +132,8 @@ public class ChatClientThread extends Thread {
         frame.addWindowListener(new WindowAdapter() {
         	@Override
         	public void windowClosing(WindowEvent e){
-        		remoteClientsInCommunication.remove(remoteClient);
+        		//remoteClientsInCommunication.remove(remoteClient);
+        		ChatClient.getInstance().getRemoteClientsInCommunication().remove(remoteClient);
         	}
 		});
         
