@@ -109,7 +109,7 @@ public class ChatClientThread extends Thread {
             public void actionPerformed(ActionEvent e) {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		message = messageTextField.getText();
-            		sendMessageAsJson(remoteClient, localClient, "chat", message);
+            		sendMessage(remoteClient, localClient, "chat", message);
             		writeToHistory(localClient, message);
             		messageTextField.setText("");
             	}
@@ -134,7 +134,7 @@ public class ChatClientThread extends Thread {
 	
 
 	
-	public void sendMessageAsJson(String to, String from, String type, String data){
+	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("to", to);

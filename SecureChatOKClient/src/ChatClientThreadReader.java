@@ -61,6 +61,8 @@ public class ChatClientThreadReader extends Thread{
 				} else if (type.equals("server")){ 
 					//message from server
 					remoteClientsInCommunication.get(from).writeToHistory(type, data);
+				} else {
+					System.out.println("ChatClientReader nepoznat type poruke");
 				}
 			}
 			
