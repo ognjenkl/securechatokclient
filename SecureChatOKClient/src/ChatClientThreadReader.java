@@ -1,8 +1,6 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.Socket;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,27 +8,28 @@ import org.json.JSONObject;
 
 public class ChatClientThreadReader extends Thread{
 
-	Socket socket;
+	//Socket socket;
 	BufferedReader in;
-	String username;
+	//String username;
 	
 	//remote clients to which this client is in communication with
-	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication = null;
+	//ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication = null;
 	
 	//included for update on JList list on gui, when new clients log in, gui JList is on this ChatClient thread
-	ChatClient chatClient;
+	//ChatClient chatClient;
 
-	public ChatClientThreadReader(ChatClient chatClient){
-		this.socket = chatClient.getSocket();
-		this.username = chatClient.getUsername();
-		this.remoteClientsInCommunication = chatClient.getRemoteClientsInCommunication();
-		this.chatClient = chatClient;
+	public ChatClientThreadReader(){//ChatClient chatClient){
+		//this.socket = chatClient.getSocket();
+		//this.username = chatClient.getUsername();
+		//this.remoteClientsInCommunication = chatClient.getRemoteClientsInCommunication();
+		//this.chatClient = chatClient;
 		
 	}
 	
 	public void run(){
 		try {
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			//in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			in = new BufferedReader(new InputStreamReader(ChatClient.getInstance().getSocket().getInputStream()));
 			
 			String request = "";
 			while ((request = in.readLine()) != null){
@@ -47,20 +46,26 @@ public class ChatClientThreadReader extends Thread{
 				
 				if(type.equals("chat")){ 
 					//remote client wants to chat, 
-					if(remoteClientsInCommunication.get(from) == null){
+					//if(remoteClientsInCommunication.get(from) == null){
+					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
 						//if client is not in the list, create new chat thread and add it to the list
-						ChatClientThread cct = new ChatClientThread(socket, from, username, data, remoteClientsInCommunication);
-						remoteClientsInCommunication.put(from, cct);
+						//ChatClientThread cct = new ChatClientThread(socket, from, username, data, remoteClientsInCommunication);
+						ChatClientThread cct = new ChatClientThread(from, data);
+						//remoteClientsInCommunication.put(from, cct);
+						ChatClient.getInstance().getRemoteClientsInCommunication().put(from, cct);
 						cct.start();
 					}else
 						//else get the thread that already exists in the list
-						remoteClientsInCommunication.get(from).writeToHistory(from, data);
+						//remoteClientsInCommunication.get(from).writeToHistory(from, data);
+						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(from, data);
 				} else if (type.equals("updateUsers")) {
 					//update users chat list
-					chatClient.updateListUsersGui(chatClient.stringToList(data,";"));
+					//chatClient.updateListUsersGui(chatClient.stringToList(data,";"));
+					ChatClient.getInstance().updateListUsersGui(ChatClient.getInstance().stringToList(data,";"));
 				} else if (type.equals("server")){ 
 					//message from server
-					remoteClientsInCommunication.get(from).writeToHistory(type, data);
+					//remoteClientsInCommunication.get(from).writeToHistory(type, data);
+					ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(type, data);
 				} else {
 					System.out.println("ChatClientReader nepoznat type poruke");
 				}

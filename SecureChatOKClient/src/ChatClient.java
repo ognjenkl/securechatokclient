@@ -46,8 +46,9 @@ public class ChatClient {
 	//remote clients to which this client is in communication with
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
 	
+	private static ChatClient chatClient = null;
     
-    public ChatClient(){
+    private ChatClient(){
 
     	//username = "o2";
     	
@@ -58,6 +59,13 @@ public class ChatClient {
     	listUsersGuiModel = new DefaultListModel<String>();
     	listUsersGui = new JList<String>(listUsersGuiModel);
     	remoteClientsInCommunication = new ConcurrentHashMap<String, ChatClientThread>();
+    }
+    
+    public static ChatClient getInstance(){
+    	if(chatClient == null)
+    		chatClient = new ChatClient();
+    	
+    	return chatClient;
     }
     
     public String getUsername() {
@@ -196,7 +204,10 @@ public class ChatClient {
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
-						ChatClientThreadReader cctr = new ChatClientThreadReader(ChatClient.this);
+						//ChatClientThreadReader cctr = new ChatClientThreadReader(ChatClient.this);
+						//use of Singleton
+						ChatClientThreadReader cctr = new ChatClientThreadReader();
+						
 						cctr.start();
 						startChatClientGUI(listChatUsersOnServer);
 						frameLogin.setVisible(false);
@@ -256,7 +267,8 @@ public class ChatClient {
 				//if(listChatUsersOnServer != null && listChatUsersOnServer.size() > 1){
 				if(listUsersGuiModel != null && listUsersGuiModel.size() > 1){
 					String remoteUser = listUsersGui.getSelectedValue();
-					ChatClientThread cct = new ChatClientThread(socket, remoteUser , username, null, remoteClientsInCommunication);
+					//ChatClientThread cct = new ChatClientThread(socket, remoteUser , username, null, remoteClientsInCommunication);
+					ChatClientThread cct = new ChatClientThread( remoteUser , null);
 					remoteClientsInCommunication.put(remoteUser, cct);
 					cct.start();
 				}
@@ -279,8 +291,10 @@ public class ChatClient {
 	
 	
 	public static void main(String[] args) {
-		ChatClient cc = new ChatClient();
-		cc.startClient();
+//		ChatClient cc = new ChatClient();
+//		cc.startClient();
+		
+		ChatClient.getInstance().startClient();
 
 	}
 	
