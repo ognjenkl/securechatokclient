@@ -6,9 +6,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.net.Socket;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -120,7 +118,7 @@ public class ChatClientThread extends Thread {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		message = messageTextField.getText();
             		//sendMessageAsJson(remoteClient, localClient, "chat", message);
-            		sendMessageAsJson(remoteClient, ChatClient.getInstance().getUsername(), "chat", message);
+            		sendMessage(remoteClient, ChatClient.getInstance().getUsername(), "chat", message);
             		//writeToHistory(localClient, message);
             		writeToHistory(ChatClient.getInstance().getUsername(), message);
             		messageTextField.setText("");
@@ -147,7 +145,7 @@ public class ChatClientThread extends Thread {
 	
 
 	
-	public void sendMessageAsJson(String to, String from, String type, String data){
+	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("to", to);

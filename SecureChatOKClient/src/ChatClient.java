@@ -113,7 +113,7 @@ public class ChatClient {
 			String type = "login";
 			String data = usern;
 			
-			sendMessageAsJson(to, from, type, data);
+			sendMessage(to, from, type, data);
 			
 			response = in.readLine();
 			
@@ -143,7 +143,7 @@ public class ChatClient {
 		return list;
 	}
 	
-	public void sendMessageAsJson(String to, String from, String type, String data){
+	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("to", to);
@@ -291,8 +291,10 @@ public class ChatClient {
 	
 	
 	public static void main(String[] args) {
-		ChatClient cc = new ChatClient();
-		cc.startClient();
+//		ChatClient cc = new ChatClient();
+//		cc.startClient();
+		
+		ChatClient.getInstance().startClient();
 
 	}
 	
