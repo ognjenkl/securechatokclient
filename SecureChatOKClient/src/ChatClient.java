@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +32,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.bouncycastle.crypto.CipherParameters;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.omg.CORBA.StringValueHelper;
@@ -125,7 +127,7 @@ public class ChatClient {
 			String type = "login";
 			String data = usern;
 			
-			sendMessage(to, from, type, data);
+			sendMessageLogin(to, from, type, data);
 			
 			response = in.readLine();
 			
@@ -155,62 +157,99 @@ public class ChatClient {
 		return list;
 	}
 	
-	public void sendMessage(String to, String from, String type, String data) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		JSONObject jsonObj = new JSONObject();
+	public void sendMessageLogin(String to, String from, String type, String data) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
+		
 		try {
-			jsonObj.put("to", to);
-			jsonObj.put("from", from);
-			jsonObj.put("type", type);
-			jsonObj.put("data", data);
-			//System.out.println("print raw json: " + jsonObj);
+			
 			
 			String opModeAsymmetric = "RSA/ECB/PKCS1Padding";
+			
 //			String opModeSymmetric = "AES/CBC/PKCS7Padding";
 			String opModeSymmetric = "AES/ECB/PKCS7Padding";
 	//		String opModeSymmetric = "DESede/ECB/PKCS7Padding";
 	//		String opModeSymmetric = "DESede/CBC/PKCS7Padding";
 			
 			
-			//System.out.println("working dir: " + System.getProperty("user.dir"));
-			//KeyPair privateKey = CryptoImpl.getKeyPair("pki/dr2048.key");
-			//KeyPair publicKey = CryptoImpl.getKeyPair("pki/dr2048.pub");
-			String publicKeyPath = "pki/og2048.pub";
-			String keyPath = "pki/og2048.key";
-			String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
-			//System.out.println("pwd: " +  keyPath);
-			KeyPair privateKey = CryptoImpl.getKeyPair(keyPath);
-			//PrivateKey privateKey = CryptoImpl.getPrivateKey("pki/og2048.key", "og2048");
-			//PublicKey publicKey = CryptoImpl.getPublicKey("pki/og2048.key", "og2048");
-			//KeyPair privateKeyPair = CryptoImpl.getKeyPair("D:\\ja\\gitprojects\\securechatokclient\\SecureChatOKClient\\pki\\og2048.pem", "og2048");
-			//KeyPair privateKeyPair = CryptoImpl.getKeyPair("\\pki\\og2048.pem", "og2048");
-			//KeyPair publicKey = CryptoImpl.getKeyPair(publicKeyPath);
+			String publicKeyPath = "pki/srv2048.pub";
+			String privateKeyPath = "pki/" + username + "2048.key";
+			//String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
+			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
 			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
-			System.out.println("krece");
 			
-			byte[] aesKey128 = CryptoImpl.generateSecretKeyAES128();
+			byte[] symmetricKey = CryptoImpl.generateSecretKeyAES128();
+			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
+			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
 			
-			System.out.println("plain: " + jsonObj.toString());
+			JSONObject jsonEnvelope = new JSONObject();
+			jsonEnvelope.put("key", symmetricKeyString);
+			jsonEnvelope.put("alg", opModeSymmetric);
+			System.out.println("client plain: " + jsonEnvelope.toString());
 			
-			//symmetric encryption
+			byte[] envelopeMaterial = jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8);
+			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, envelopeMaterial, true);
+			byte[] envelopeEncoded = Base64.getEncoder().encode(envelope); 
+			String envelopeString = new String(envelopeEncoded, StandardCharsets.UTF_8);
 			
-			System.out.println("symmetric key: " + new String(aesKey128));
-			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, aesKey128, jsonObj.toString().getBytes(StandardCharsets.UTF_8),	true);
-			System.out.println("cipher: " + new String(cipher));
-			
-			
-			//byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKey.getPublic(), aesKey128, true);
-			//byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey.getPublic(), aesKey128, true);
-			byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, aesKey128, true);
-			
-			byte[] keyDecrypt = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKey.getPrivate(), keyCipher, false);
-			System.out.println("test decrypt: " + new String(keyDecrypt));
-			
-			//symmetric decryption
-			byte[] decrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, keyDecrypt, cipher, false);
-			System.out.println("decrypt: " + new String(decrypt));
-			
-			out.println(jsonObj);
+			System.out.println("client envelopeString: " + envelopeString);
+			out.println(envelopeString);
 
+			
+			String request = "";
+			String predefinedOKTag = "asymmOK";
+			request = in.readLine();
+			System.out.println("client received: " + request);
+			byte[] requestDecoded = Base64.getDecoder().decode(request.getBytes(StandardCharsets.UTF_8));
+			System.out.println("client symmetricKey1: " + new String(symmetricKey, StandardCharsets.UTF_8));
+			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
+			String requestString = new String(requestDecrypt, StandardCharsets.UTF_8);
+			if(requestString.equals(predefinedOKTag)){
+				System.out.println("Dobijeno: " + requestString);
+				
+				JSONObject jsonObj = new JSONObject();
+				jsonObj.put("to", to);
+				jsonObj.put("from", from);
+				jsonObj.put("type", type);
+				jsonObj.put("data", data);
+				//System.out.println("print raw json: " + jsonObj);
+				
+				System.out.println("client sent json: " + jsonObj.toString() );
+				System.out.println("client symmetricKey2: " + new String(symmetricKey, StandardCharsets.UTF_8));
+				byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
+				byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
+				String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
+				
+				out.println(cipherString);
+				System.out.println("login cihpher: " + cipherString);
+				
+			}
+			//System.out.println("symmetric key: " + new String(aesKey128));
+		//	byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, aesKey128, jsonObj.toString().getBytes(StandardCharsets.UTF_8),	true);
+			//System.out.println("cipher: " + new String(cipher));
+		//	byte[] cipherBase64Encoded = Base64.getEncoder().encode(cipher);
+			//System.out.println("cipherBase64Encoded: " + new String(cipherBase64Encoded));
+			
+		//	byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, aesKey128, true);
+			//System.out.println("keyCipher: " + new String(keyCipher));
+			
+		//	byte[] keyCipherBase64Encoded = Base64.getEncoder().encode(keyCipher);
+			//System.out.println("keyCipherBase64Encoded: " + new String(keyCipherBase64Encoded));
+			
+//			byte[] keyCipherBase64Decoded = Base64.getDecoder().decode(keyCipherBase64Encoded);
+//			System.out.println("keyCipherBase64Decoded: " + new String(keyCipherBase64Decoded));
+//			
+//			byte[] keyDecrypt = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKeyPair.getPrivate(), keyCipherBase64Decoded, false);
+//			System.out.println("test symmetric key decrypt: " + new String(keyDecrypt));
+//			
+//			
+//			byte[] cipherBase64Decoded = Base64.getDecoder().decode(cipherBase64Encoded);
+//			System.out.println("cipherBase64Decoded: " + new String(cipherBase64Decoded));
+//			//symmetric decryption
+//			byte[] decrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, keyDecrypt, cipherBase64Decoded, false);
+//			System.out.println("decrypt: " + new String(decrypt));
+//			
+//			out.println(jsonObj);
+			
+			
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
