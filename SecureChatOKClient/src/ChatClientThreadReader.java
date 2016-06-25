@@ -5,6 +5,8 @@ import java.io.InputStreamReader;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import secureLib.CryptoImpl;
+
 
 public class ChatClientThreadReader extends Thread{
 

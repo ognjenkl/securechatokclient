@@ -7,11 +7,21 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -23,6 +33,9 @@ import javax.swing.JTextField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.omg.CORBA.StringValueHelper;
+
+import secureLib.CryptoImpl;
 
 public class ChatClient {
 	
@@ -92,7 +105,6 @@ public class ChatClient {
 		} 
 		
 	}
-	
 
 	public Socket getSocket() {
 		return socket;
@@ -102,7 +114,7 @@ public class ChatClient {
 		this.socket = socket;
 	}
 
-	public List<String> login(String usern){
+	public List<String> login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
 		String response = "";
 		List<String> usersList = null;
 		try {			
@@ -143,7 +155,7 @@ public class ChatClient {
 		return list;
 	}
 	
-	public void sendMessage(String to, String from, String type, String data){
+	public void sendMessage(String to, String from, String type, String data) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
 		JSONObject jsonObj = new JSONObject();
 		try {
 			jsonObj.put("to", to);
@@ -151,6 +163,52 @@ public class ChatClient {
 			jsonObj.put("type", type);
 			jsonObj.put("data", data);
 			//System.out.println("print raw json: " + jsonObj);
+			
+			String opModeAsymmetric = "RSA/ECB/PKCS1Padding";
+//			String opModeSymmetric = "AES/CBC/PKCS7Padding";
+			String opModeSymmetric = "AES/ECB/PKCS7Padding";
+	//		String opModeSymmetric = "DESede/ECB/PKCS7Padding";
+	//		String opModeSymmetric = "DESede/CBC/PKCS7Padding";
+			
+			
+			//System.out.println("working dir: " + System.getProperty("user.dir"));
+			//KeyPair privateKey = CryptoImpl.getKeyPair("pki/dr2048.key");
+			//KeyPair publicKey = CryptoImpl.getKeyPair("pki/dr2048.pub");
+			String publicKeyPath = "pki/og2048.pub";
+			String keyPath = "pki/og2048.key";
+			String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
+			//System.out.println("pwd: " +  keyPath);
+			KeyPair privateKey = CryptoImpl.getKeyPair(keyPath);
+			//PrivateKey privateKey = CryptoImpl.getPrivateKey("pki/og2048.key", "og2048");
+			//PublicKey publicKey = CryptoImpl.getPublicKey("pki/og2048.key", "og2048");
+			//KeyPair privateKeyPair = CryptoImpl.getKeyPair("D:\\ja\\gitprojects\\securechatokclient\\SecureChatOKClient\\pki\\og2048.pem", "og2048");
+			//KeyPair privateKeyPair = CryptoImpl.getKeyPair("\\pki\\og2048.pem", "og2048");
+			//KeyPair publicKey = CryptoImpl.getKeyPair(publicKeyPath);
+			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
+			System.out.println("krece");
+			
+			byte[] aesKey128 = CryptoImpl.generateSecretKeyAES128();
+			
+			System.out.println("plain: " + jsonObj.toString());
+			
+			//symmetric encryption
+			
+			System.out.println("symmetric key: " + new String(aesKey128));
+			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, aesKey128, jsonObj.toString().getBytes(StandardCharsets.UTF_8),	true);
+			System.out.println("cipher: " + new String(cipher));
+			
+			
+			//byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKey.getPublic(), aesKey128, true);
+			//byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey.getPublic(), aesKey128, true);
+			byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, aesKey128, true);
+			
+			byte[] keyDecrypt = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKey.getPrivate(), keyCipher, false);
+			System.out.println("test decrypt: " + new String(keyDecrypt));
+			
+			//symmetric decryption
+			byte[] decrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, keyDecrypt, cipher, false);
+			System.out.println("decrypt: " + new String(decrypt));
+			
 			out.println(jsonObj);
 
 		} catch (JSONException e) {
