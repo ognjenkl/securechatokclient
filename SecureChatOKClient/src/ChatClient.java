@@ -15,6 +15,7 @@ import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.List;
@@ -58,6 +59,10 @@ public class ChatClient {
 	//part of JList component for items change, becous JList cant change items
 	DefaultListModel<String> listUsersGuiModel;
 	
+	String opModeAsymmetric = "";
+	String opModeSymmetric = "";
+	byte[] symmetricKey = null;
+	
 	//remote clients to which this client is in communication with
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
 	
@@ -89,6 +94,22 @@ public class ChatClient {
 
 	public void setUsername(String username) {
 		this.username = username;
+	}
+	
+	public String getOpModeAsymmetric() {
+		return opModeAsymmetric;
+	}
+
+	public void setOpModeAsymmetric(String opModeAsymmetric) {
+		this.opModeAsymmetric = opModeAsymmetric;
+	}
+
+	public String getOpModeSymmetric() {
+		return opModeSymmetric;
+	}
+
+	public void setOpModeSymmetric(String opModeSymmetric) {
+		this.opModeSymmetric = opModeSymmetric;
 	}
 	
 	public void startClient(){
@@ -162,12 +183,21 @@ public class ChatClient {
 		try {
 			
 			
+			if(Math.random() < 0.5){
+				opModeSymmetric = "AES/ECB/PKCS7Padding";
+				symmetricKey = CryptoImpl.generateSecretKeyAES128();
+			}else{
+				 opModeSymmetric = "DESede/ECB/PKCS7Padding";
+				 symmetricKey = CryptoImpl.generateDESede168Key();
+			}
+				
 			String opModeAsymmetric = "RSA/ECB/PKCS1Padding";
 			
 //			String opModeSymmetric = "AES/CBC/PKCS7Padding";
-			String opModeSymmetric = "AES/ECB/PKCS7Padding";
+	//		String opModeSymmetric = "AES/ECB/PKCS7Padding";
 	//		String opModeSymmetric = "DESede/ECB/PKCS7Padding";
 	//		String opModeSymmetric = "DESede/CBC/PKCS7Padding";
+			
 			
 			
 			String publicKeyPath = "pki/srv2048.pub";
@@ -176,7 +206,7 @@ public class ChatClient {
 			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
 			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
 			
-			byte[] symmetricKey = CryptoImpl.generateSecretKeyAES128();
+			
 			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
 			
@@ -190,64 +220,31 @@ public class ChatClient {
 			byte[] envelopeEncoded = Base64.getEncoder().encode(envelope); 
 			String envelopeString = new String(envelopeEncoded, StandardCharsets.UTF_8);
 			
-			System.out.println("client envelopeString: " + envelopeString);
 			out.println(envelopeString);
 
 			
 			String request = "";
 			String predefinedOKTag = "asymmOK";
 			request = in.readLine();
-			System.out.println("client received: " + request);
 			byte[] requestDecoded = Base64.getDecoder().decode(request.getBytes(StandardCharsets.UTF_8));
-			System.out.println("client symmetricKey1: " + new String(symmetricKey, StandardCharsets.UTF_8));
 			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
 			String requestString = new String(requestDecrypt, StandardCharsets.UTF_8);
 			if(requestString.equals(predefinedOKTag)){
-				System.out.println("Dobijeno: " + requestString);
+				System.out.println("Predefined OK: " + requestString);
 				
 				JSONObject jsonObj = new JSONObject();
 				jsonObj.put("to", to);
 				jsonObj.put("from", from);
 				jsonObj.put("type", type);
 				jsonObj.put("data", data);
-				//System.out.println("print raw json: " + jsonObj);
 				
 				System.out.println("client sent json: " + jsonObj.toString() );
-				System.out.println("client symmetricKey2: " + new String(symmetricKey, StandardCharsets.UTF_8));
 				byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
 				byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
 				String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
 				
-				out.println(cipherString);
-				System.out.println("login cihpher: " + cipherString);
-				
+				out.println(cipherString);				
 			}
-			//System.out.println("symmetric key: " + new String(aesKey128));
-		//	byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, aesKey128, jsonObj.toString().getBytes(StandardCharsets.UTF_8),	true);
-			//System.out.println("cipher: " + new String(cipher));
-		//	byte[] cipherBase64Encoded = Base64.getEncoder().encode(cipher);
-			//System.out.println("cipherBase64Encoded: " + new String(cipherBase64Encoded));
-			
-		//	byte[] keyCipher = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, aesKey128, true);
-			//System.out.println("keyCipher: " + new String(keyCipher));
-			
-		//	byte[] keyCipherBase64Encoded = Base64.getEncoder().encode(keyCipher);
-			//System.out.println("keyCipherBase64Encoded: " + new String(keyCipherBase64Encoded));
-			
-//			byte[] keyCipherBase64Decoded = Base64.getDecoder().decode(keyCipherBase64Encoded);
-//			System.out.println("keyCipherBase64Decoded: " + new String(keyCipherBase64Decoded));
-//			
-//			byte[] keyDecrypt = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKeyPair.getPrivate(), keyCipherBase64Decoded, false);
-//			System.out.println("test symmetric key decrypt: " + new String(keyDecrypt));
-//			
-//			
-//			byte[] cipherBase64Decoded = Base64.getDecoder().decode(cipherBase64Encoded);
-//			System.out.println("cipherBase64Decoded: " + new String(cipherBase64Decoded));
-//			//symmetric decryption
-//			byte[] decrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, keyDecrypt, cipherBase64Decoded, false);
-//			System.out.println("decrypt: " + new String(decrypt));
-//			
-//			out.println(jsonObj);
 			
 			
 		} catch (JSONException e) {
@@ -301,8 +298,6 @@ public class ChatClient {
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
-						//ChatClientThreadReader cctr = new ChatClientThreadReader(ChatClient.this);
-						//use of Singleton
 						ChatClientThreadReader cctr = new ChatClientThreadReader();
 						
 						cctr.start();
@@ -361,10 +356,8 @@ public class ChatClient {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				//if(listChatUsersOnServer != null && listChatUsersOnServer.size() > 1){
 				if(listUsersGuiModel != null && listUsersGuiModel.size() > 1){
 					String remoteUser = listUsersGui.getSelectedValue();
-					//ChatClientThread cct = new ChatClientThread(socket, remoteUser , username, null, remoteClientsInCommunication);
 					ChatClientThread cct = new ChatClientThread( remoteUser , null);
 					remoteClientsInCommunication.put(remoteUser, cct);
 					cct.start();
@@ -388,8 +381,6 @@ public class ChatClient {
 	
 	
 	public static void main(String[] args) {
-//		ChatClient cc = new ChatClient();
-//		cc.startClient();
 		
 		ChatClient.getInstance().startClient();
 
