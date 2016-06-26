@@ -273,7 +273,7 @@ public class ChatClient {
 			//String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
 			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
 			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
-			System.out.println("drugi public: "+publicKey.toString());
+			//System.out.println("drugi public: "+publicKey.toString());
 			
 			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
@@ -306,7 +306,7 @@ public class ChatClient {
 				jsonObj.put("type", type);
 				jsonObj.put("data", data);
 				
-				System.out.println("client sent json: " + jsonObj.toString() );
+				System.out.println("client sent json (prencrypted): " + jsonObj.toString() );
 				byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
 				byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
 				String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
@@ -379,7 +379,7 @@ public class ChatClient {
 					listChatUsersOnServer = login(username);
 					
 					System.out.println("Client: " + username );
-					System.out.println("List of loggedin clients: " + listChatUsersOnServer.size());
+					//System.out.println("List of loggedin clients: " + listChatUsersOnServer.size());
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
@@ -443,7 +443,6 @@ public class ChatClient {
 						cct.requestRemoteClientPublicKey(remoteUser);
 						synchronized (cct) {
 							cct.wait();
-							System.out.println("Poslije wait-a :D");
 						}
 					} catch (InvalidKeyException e1) {
 						// TODO Auto-generated catch block

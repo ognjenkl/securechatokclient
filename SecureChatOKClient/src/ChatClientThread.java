@@ -61,26 +61,9 @@ public class ChatClientThread extends Thread {
 	 */
 	PublicKey remotePublicKey = null;
 	
-	
-	//remote clients to which this client is in communication with, and it is also in the list
-	//so when it's closed, it's removed form list on widnow close operation
-	//ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
-	
-//	public ChatClientThread(Socket socket, String remoteClient, String localClient, String message, ConcurrentHashMap<String, ChatClientThread> remoteClients){
-//		this.socket = socket;
-//		this.remoteClient = remoteClient;
-//		this.localClient = localClient;
-//		this.message = message;
-//		this.remoteClientsInCommunication = remoteClients;
-//	}
-	
-	
 	public ChatClientThread( String remoteClient, String message){
-		//this.socket = socket;
 		this.remoteClient = remoteClient;
-		//this.localClient = localClient;
 		this.message = message;
-		//this.remoteClientsInCommunication = remoteClients;
 		try {
 			in = new BufferedReader(new InputStreamReader(ChatClient.getInstance().getSocket().getInputStream()));
 			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
@@ -92,18 +75,11 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void run(){
-//			try {
-				//out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())),true);
-				// prebacen u konstruktor
-				//out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
 				
 			if(frame == null)
 					startGUI();
 				
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}		
+			//System.out.println("ChatClientThrad public key: " + remotePublicKey);
 	}
 	
 	
@@ -111,7 +87,7 @@ public class ChatClientThread extends Thread {
 	 * 
 	 */
 	//public void startGUI(String localUser, String remoteUser){
-	public void startGUI(){
+	public synchronized void startGUI(){
 		
 		frame = new JFrame("ChatClientThreadGUI");
 		panel = new JPanel();
@@ -153,9 +129,7 @@ public class ChatClientThread extends Thread {
             public void actionPerformed(ActionEvent e) {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		message = messageTextField.getText();
-            		//sendMessageAsJson(remoteClient, localClient, "chat", message);
             		sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, message);
-            		//writeToHistory(localClient, message);
             		writeToHistory(ChatClient.getInstance().getUsername(), message);
             		messageTextField.setText("");
             	}
@@ -178,6 +152,17 @@ public class ChatClientThread extends Thread {
         
 	}
 	
+	
+	
+	
+	public synchronized PublicKey getRemotePublicKey() {
+		return remotePublicKey;
+	}
+
+	public synchronized void setRemotePublicKey(PublicKey remotePublicKey) {
+		this.remotePublicKey = remotePublicKey;
+	}
+
 	/**
 	 * Decrypt message.
 	 * 
@@ -193,7 +178,7 @@ public class ChatClientThread extends Thread {
 	}
 	
 	/**
-	 * Encrypts and send message.
+	 * Encrypts message for server and sends symmetric encrypted message to server.
 	 * 
 	 * @param to
 	 * @param from
