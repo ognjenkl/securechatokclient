@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
@@ -25,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import org.bouncycastle.util.Encodable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -56,10 +58,23 @@ public class ChatClientThread extends Thread {
 	String remoteClient;
 	String message;
 	BufferedReader in;
+	
 	/**
 	 * Public key of remote client in secure chat communication.
 	 */
 	PublicKey remotePublicKey = null;
+	
+	/**
+	 * Symmetric (secret) key for chat communication.
+	 */
+	byte[] symmetricKeyChat = null;
+	
+	/**
+	 * Hash function
+	 */
+	String hashFunction = "";
+	
+	String opModeSymmetric = "";
 	
 	public ChatClientThread( String remoteClient, String message){
 		this.remoteClient = remoteClient;
@@ -128,10 +143,74 @@ public class ChatClientThread extends Thread {
         send.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
-            		message = messageTextField.getText();
-            		sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, message);
-            		writeToHistory(ChatClient.getInstance().getUsername(), message);
-            		messageTextField.setText("");
+            		try{
+            			message = messageTextField.getText();
+                		//sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, message);
+                		
+                		if(symmetricKeyChat == null){
+                			
+                			byte[] tempSymmetrickey = null;
+                			if(Math.random() < 0.5){
+                				opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePaddingAes();
+                				tempSymmetrickey = CryptoImpl.generateSecretKeyAES128();
+                			} else {
+                				 opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePadding3Des();
+                				 tempSymmetrickey = CryptoImpl.generateDESede168Key();
+                			}
+                			String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(tempSymmetrickey),StandardCharsets.UTF_8);
+                			
+                			//cipher
+                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
+                			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
+                			
+                			//digest
+                			byte[] digest = null;
+                			if(Math.random() < 0.5){
+                				hashFunction = MessageType.SHA256;
+                				digest = CryptoImpl.hash(hashFunction, cipher);
+                			} else {
+                				hashFunction = MessageType.SHA512;
+                				digest = CryptoImpl.hash(hashFunction, cipher);
+                				
+                			}
+                			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
+                			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);
+                			
+                			JSONObject jsonChatKey = new JSONObject();
+                			jsonChatKey.put(MessageType.KEY, tempSymmetricKeyEncodedString);
+                			jsonChatKey.put(MessageType.ALGORITHM, opModeSymmetric);
+                			jsonChatKey.put(MessageType.HASH, hashFunction);
+                			byte[] jsonChatKeyEncoded = Base64.getEncoder().encode(jsonChatKey.toString().getBytes(StandardCharsets.UTF_8));
+     
+                			//envelope
+                			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), remotePublicKey, jsonChatKeyEncoded, true);
+                			String envelopeString = new String(Base64.getEncoder().encode(envelope), StandardCharsets.UTF_8);
+                			
+                			
+                			JSONObject jsonMessage = new JSONObject();
+                			jsonMessage.put(MessageType.ENVELOPE, envelopeString);
+                			jsonMessage.put(MessageType.DIGSIG, digitalSignaturString);
+                			jsonMessage.put(MessageType.CIPHER, cipherString);
+                			
+                			
+                			sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHATKEY, jsonMessage.toString());
+                		}
+                		synchronized (this) {
+    						this.wait();
+    					}
+                		System.out.println("idemo dalje");
+                		//sendMessageChat(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, data);
+                		
+                		writeToHistory(ChatClient.getInstance().getUsername(), message);
+                		messageTextField.setText("");
+            			
+            		} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (JSONException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
             	}
             }
         });
@@ -205,17 +284,82 @@ public class ChatClientThread extends Thread {
 		}
 	}
 	
+	/**
+	 * Sends message with encrypted symmetric key
+	 * 
+	 * @param to
+	 * @param from
+	 * @param type
+	 * @param data
+	 */
+	public void sendMessageChatKey(String to, String from, String type, String data){
+//		JSONObject jsonObj = new JSONObject();
+//		try {
+//			jsonObj.put("to", to);
+//			jsonObj.put("from", from);
+//			jsonObj.put("type", type);
+//			jsonObj.put("data", data);
+//			
+//			
+//			out.println();
+//
+//		} catch (JSONException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		sendMessage(to, from, type, data);
+	}
+
+	/**
+	 * Sends chat message.
+	 * 
+	 * @param to
+	 * @param from
+	 * @param type
+	 * @param data
+	 */
+	public void sendMessageChat(String to, String from, String type, String data){
+
+		if(symmetricKeyChat == null){
+			if(Math.random() < 0.5){
+				opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePaddingAes() ;
+				symmetricKeyChat = CryptoImpl.generateSecretKeyAES128();
+			}else{
+				 opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePadding3Des();
+				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
+			}
+			
+			
+		}
+		
+		
+		
+		JSONObject jsonObj = new JSONObject();
+		try {
+			jsonObj.put("to", to);
+			jsonObj.put("from", from);
+			jsonObj.put("type", type);
+			jsonObj.put("data", data);
+			
+			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
+			byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
+			String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
+			
+			out.println(cipherString);
+
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
 	public void writeToHistory(String user, String message){
 		messageHistory.append(user + ":" + message + "\n" );
 	}
 	
 	public void requestRemoteClientPublicKey(String user) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
 		sendMessage(user, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, user);
-//		response = in.readLine();
-//		System.out.println("nesto stiglo: " + response );
-//		String responseDecrypted = decryptMessage(response);
-//		System.out.println("nesto stiglo: " + responseDecrypted );
-		
 	}
 
 }

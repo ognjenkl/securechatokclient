@@ -85,6 +85,13 @@ public class ChatClientThreadReader extends Thread{
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).setRemotePublicKey(publicKey);
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).notify();
 					}
+				} else if (type.equals(MessageType.CHATKEY)) {
+					
+					//provjeriti da li je poruka ispravna verifikovati
+					// a zatim odgovoriti 
+				} else if (type.equals(MessageType.CHATKEYOK)) {
+					// odgovoro od chatkey treba da se ovdje uhvati kod drugog clienta
+					// da se setuje symmetricKey izmedu dva client-a za secure chat komunikaciju
 				} else {
 					System.out.println("ChatClientReader nepoznat type poruke");
 				}

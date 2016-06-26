@@ -62,7 +62,7 @@ public class ChatClient {
 	String opModeSymmetric = "";
 	byte[] symmetricKey = null;
 	
-	Object lockObj = null;
+	KeyPair privateKeyPair = null;
 	
 	//remote clients as key to which this client's thread is in communication with
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
@@ -105,8 +105,8 @@ public class ChatClient {
 			
 				fis.close();
 				
-				lockObj = new Object();
-	    		
+				privateKeyPair = CryptoImpl.getKeyPair("pki/" + username + "2048.key");
+				
 	    	} else {
 	    		System.out.println("Ne postoji properties file");
 	    	}
@@ -174,14 +174,37 @@ public class ChatClient {
 	public synchronized void setRemoteClientsInCommunication(ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication) {
 		this.remoteClientsInCommunication = remoteClientsInCommunication;
 	}
-	
-	
-	public synchronized Object getLockObj() {
-		return lockObj;
+
+	public synchronized String getPropSymmetricOpModePaddingAes() {
+		return propSymmetricOpModePaddingAes;
 	}
 
-	public synchronized void setLockObj(Object lockObj) {
-		this.lockObj = lockObj;
+	public synchronized void setPropSymmetricOpModePaddingAes(String propSymmetricOpModePaddingAes) {
+		this.propSymmetricOpModePaddingAes = propSymmetricOpModePaddingAes;
+	}
+
+	public synchronized String getPropSymmetricOpModePadding3Des() {
+		return propSymmetricOpModePadding3Des;
+	}
+
+	public synchronized void setPropSymmetricOpModePadding3Des(String propSymmetricOpModePadding3Des) {
+		this.propSymmetricOpModePadding3Des = propSymmetricOpModePadding3Des;
+	}
+
+	public synchronized String getPropAsymmetricOpModePaddingRsa() {
+		return propAsymmetricOpModePaddingRsa;
+	}
+
+	public synchronized void setPropAsymmetricOpModePaddingRsa(String propAsymmetricOpModePaddingRsa) {
+		this.propAsymmetricOpModePaddingRsa = propAsymmetricOpModePaddingRsa;
+	}
+
+	public synchronized KeyPair getPrivateKeyPair() {
+		return privateKeyPair;
+	}
+
+	public synchronized void setPrivateKeyPair(KeyPair privateKeyPair) {
+		this.privateKeyPair = privateKeyPair;
 	}
 
 	public void startClient(){
@@ -269,9 +292,6 @@ public class ChatClient {
 			
 			
 			String publicKeyPath = propServerPublicKeyPath;
-			String privateKeyPath = "pki/" + username + "2048.key";
-			//String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
-			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
 			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
 			//System.out.println("drugi public: "+publicKey.toString());
 			
@@ -292,7 +312,7 @@ public class ChatClient {
 
 			
 			String request = "";
-			String predefinedOKTag = MessageType.OK;
+			String predefinedOKTag = MessageType.lOGINOK;
 			request = in.readLine();
 			byte[] requestDecoded = Base64.getDecoder().decode(request.getBytes(StandardCharsets.UTF_8));
 			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
@@ -441,9 +461,13 @@ public class ChatClient {
 
 					try {
 						cct.requestRemoteClientPublicKey(remoteUser);
+						
 						synchronized (cct) {
 							cct.wait();
 						}
+						
+						cct.start();
+						
 					} catch (InvalidKeyException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -467,7 +491,7 @@ public class ChatClient {
 						e1.printStackTrace();
 					}
 					
-					cct.start();
+					
 				}
 				
 			}
