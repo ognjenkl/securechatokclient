@@ -1,12 +1,14 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import secureLib.CryptoImpl;
-import utilLib.MessageType;
+import secureUtil.MessageType;
 
 
 public class ChatClientThreadReader extends Thread{
@@ -42,7 +44,10 @@ public class ChatClientThreadReader extends Thread{
 				//{"data":"Korisnik \"og\" se odjavio!","from":"og","to":"dr","type":"server"}
 				System.out.println("Reader gets request: " + request);
 				
-				JSONObject jsonObject = new JSONObject(request);
+				String requestDecrypted = decryptMessage(request);
+				System.out.println("Reader gets request: " + requestDecrypted);
+				
+				JSONObject jsonObject = new JSONObject(requestDecrypted);
 				String from = jsonObject.getString("from");
 				String type = jsonObject.getString("type");
 				String data = jsonObject.getString("data");
@@ -52,9 +57,7 @@ public class ChatClientThreadReader extends Thread{
 					//if(remoteClientsInCommunication.get(from) == null){
 					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
 						//if client is not in the list, create new chat thread and add it to the list
-						//ChatClientThread cct = new ChatClientThread(socket, from, username, data, remoteClientsInCommunication);
 						ChatClientThread cct = new ChatClientThread(from, data);
-						//remoteClientsInCommunication.put(from, cct);
 						ChatClient.getInstance().getRemoteClientsInCommunication().put(from, cct);
 						cct.start();
 					}else
@@ -85,5 +88,19 @@ public class ChatClientThreadReader extends Thread{
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	/**
+	 * Decrypt message.
+	 * 
+	 * @param message
+	 * @return
+	 */
+	public String decryptMessage(String message){
+		byte[] messageDecoded = Base64.getDecoder().decode(message.getBytes(StandardCharsets.UTF_8));
+		byte[] messageDecrypt = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), messageDecoded, false);
+		String messageString = new String(messageDecrypt, StandardCharsets.UTF_8);
+		
+		return messageString;
 	}
 }

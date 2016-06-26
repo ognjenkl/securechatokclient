@@ -38,7 +38,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import secureLib.CryptoImpl;
-import utilLib.MessageType;
+import secureUtil.MessageType;
 
 public class ChatClient {
 	
@@ -62,7 +62,9 @@ public class ChatClient {
 	String opModeSymmetric = "";
 	byte[] symmetricKey = null;
 	
-	//remote clients to which this client is in communication with
+	
+	
+	//remote clients as key to which this client's thread is in communication with
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
 	
 	private static ChatClient chatClient = null;
@@ -116,45 +118,61 @@ public class ChatClient {
 		}
     }
     
-    public static ChatClient getInstance(){
+    public static synchronized ChatClient getInstance(){
     	if(chatClient == null)
     		chatClient = new ChatClient();
     	
     	return chatClient;
     }
     
-    public String getUsername() {
+    public synchronized String getUsername() {
 		return username;
 	}
 
-	public void setUsername(String username) {
+	public synchronized void setUsername(String username) {
 		this.username = username;
 	}
 	
-	public String getOpModeAsymmetric() {
+	public synchronized String getOpModeAsymmetric() {
 		return opModeAsymmetric;
 	}
 
-	public void setOpModeAsymmetric(String opModeAsymmetric) {
+	public synchronized void setOpModeAsymmetric(String opModeAsymmetric) {
 		this.opModeAsymmetric = opModeAsymmetric;
 	}
 
-	public String getOpModeSymmetric() {
+	public synchronized String getOpModeSymmetric() {
 		return opModeSymmetric;
 	}
 
-	public void setOpModeSymmetric(String opModeSymmetric) {
+	public synchronized void setOpModeSymmetric(String opModeSymmetric) {
 		this.opModeSymmetric = opModeSymmetric;
 	}
 	
-	public byte[] getSymmetricKey() {
+	public synchronized byte[] getSymmetricKey() {
 		return symmetricKey;
 	}
 
-	public void setSymmetricKey(byte[] symmetricKey) {
+	public synchronized void setSymmetricKey(byte[] symmetricKey) {
 		this.symmetricKey = symmetricKey;
 	}
 
+	public synchronized Socket getSocket() {
+		return socket;
+	}
+
+	public synchronized void setSocket(Socket socket) {
+		this.socket = socket;
+	}
+	
+	public synchronized ConcurrentHashMap<String, ChatClientThread> getRemoteClientsInCommunication() {
+		return remoteClientsInCommunication;
+	}
+
+	public synchronized void setRemoteClientsInCommunication(ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication) {
+		this.remoteClientsInCommunication = remoteClientsInCommunication;
+	}
+	
 	public void startClient(){
 		
 		try {
@@ -172,13 +190,6 @@ public class ChatClient {
 		
 	}
 
-	public Socket getSocket() {
-		return socket;
-	}
-
-	public void setSocket(Socket socket) {
-		this.socket = socket;
-	}
 
 	public List<String> login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
 		List<String> usersList = null;
@@ -193,7 +204,7 @@ public class ChatClient {
 			sendMessageLogin(to, from, type, data);
 			
 			String response = in.readLine();
-			String responseDecrypt = receiveMessage(response);
+			String responseDecrypt = decryptMessage(response);
 			
 			usersList = stringToList(responseDecrypt,";");
 			
@@ -296,11 +307,12 @@ public class ChatClient {
 	
 	
 	/**
-	 * Receive message and decrypt.
+	 * Decrypt message.
+	 * 
 	 * @param message
 	 * @return
 	 */
-	public String receiveMessage(String message){
+	public String decryptMessage(String message){
 		byte[] messageDecoded = Base64.getDecoder().decode(message.getBytes(StandardCharsets.UTF_8));
 		byte[] messageDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, messageDecoded, false);
 		String messageString = new String(messageDecrypt, StandardCharsets.UTF_8);
@@ -353,10 +365,14 @@ public class ChatClient {
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
-						ChatClientThreadReader cctr = new ChatClientThreadReader();
 						
-						cctr.start();
+						
+						
 						startChatClientGUI(listChatUsersOnServer);
+						
+						ChatClientThreadReader cctr = new ChatClientThreadReader();
+						cctr.start();
+						
 						frameLogin.setVisible(false);
 					}
 					else {
@@ -372,15 +388,6 @@ public class ChatClient {
 		
 		frameLogin.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frameLogin.setVisible(true);
-	}
-	
-	
-	public ConcurrentHashMap<String, ChatClientThread> getRemoteClientsInCommunication() {
-		return remoteClientsInCommunication;
-	}
-
-	public void setRemoteClientsInCommunication(ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication) {
-		this.remoteClientsInCommunication = remoteClientsInCommunication;
 	}
 
 	public void startChatClientGUI(List<String> clients){
@@ -441,5 +448,7 @@ public class ChatClient {
 
 	}
 	
+
+
 	
 }

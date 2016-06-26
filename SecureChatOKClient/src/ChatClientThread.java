@@ -2,14 +2,22 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.Random;
 
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -21,8 +29,15 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import secureLib.CryptoImpl;
-import utilLib.MessageType;
+import secureUtil.MessageType;
 
+
+/**
+ * Client's thread for secure chat communication to other clients.
+ * 
+ * @author ognjen
+ *
+ */
 public class ChatClientThread extends Thread {
 
 	//Socket socket;
@@ -40,6 +55,12 @@ public class ChatClientThread extends Thread {
 	//String localClient;
 	String remoteClient;
 	String message;
+	BufferedReader in;
+	/**
+	 * Public key of remote client in secure chat communication.
+	 */
+	PublicKey remotePublicKey = null;
+	
 	
 	//remote clients to which this client is in communication with, and it is also in the list
 	//so when it's closed, it's removed form list on widnow close operation
@@ -60,6 +81,12 @@ public class ChatClientThread extends Thread {
 		//this.localClient = localClient;
 		this.message = message;
 		//this.remoteClientsInCommunication = remoteClients;
+		try {
+			in = new BufferedReader(new InputStreamReader(ChatClient.getInstance().getSocket().getInputStream()));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public void run(){
@@ -148,25 +175,28 @@ public class ChatClientThread extends Thread {
         
 	}
 	
+	/**
+	 * Decrypt message.
+	 * 
+	 * @param message
+	 * @return
+	 */
+	public String decryptMessage(String message){
+		byte[] messageDecoded = Base64.getDecoder().decode(message.getBytes(StandardCharsets.UTF_8));
+		byte[] messageDecrypt = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), messageDecoded, false);
+		String messageString = new String(messageDecrypt, StandardCharsets.UTF_8);
+		
+		return messageString;
+	}
 	
-
-	
-//	public void sendMessage(String to, String from, String type, String data){
-//		JSONObject jsonObj = new JSONObject();
-//		try {
-//			jsonObj.put("to", to);
-//			jsonObj.put("from", from);
-//			jsonObj.put("type", type);
-//			jsonObj.put("data", data);
-//			//System.out.println("print raw json: " + jsonObj);
-//			out.println(jsonObj);
-//
-//		} catch (JSONException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
-	
+	/**
+	 * Encrypts and send message.
+	 * 
+	 * @param to
+	 * @param from
+	 * @param type
+	 * @param data
+	 */
 	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
@@ -191,5 +221,14 @@ public class ChatClientThread extends Thread {
 		messageHistory.append(user + ":" + message + "\n" );
 	}
 	
-	
+	public void requestRemoteClientPublicKey() throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
+		String response = "";
+		sendMessage(MessageType.SERVER, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, "");
+		response = in.readLine();
+		System.out.println("nesto stiglo: " + response );
+		String responseDecrypted = decryptMessage(response);
+		System.out.println("nesto stiglo: " + responseDecrypted );
+		
+	}
+
 }
