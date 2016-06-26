@@ -6,6 +6,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import secureLib.CryptoImpl;
+import utilLib.MessageType;
 
 
 public class ChatClientThreadReader extends Thread{
@@ -46,7 +47,7 @@ public class ChatClientThreadReader extends Thread{
 				String type = jsonObject.getString("type");
 				String data = jsonObject.getString("data");
 				
-				if(type.equals("chat")){ 
+				if(type.equals(MessageType.CHAT)){ 
 					//remote client wants to chat, 
 					//if(remoteClientsInCommunication.get(from) == null){
 					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
@@ -60,11 +61,11 @@ public class ChatClientThreadReader extends Thread{
 						//else get the thread that already exists in the list
 						//remoteClientsInCommunication.get(from).writeToHistory(from, data);
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(from, data);
-				} else if (type.equals("updateUsers")) {
+				} else if (type.equals(MessageType.UPDATE)) {
 					//update users chat list
 					//chatClient.updateListUsersGui(chatClient.stringToList(data,";"));
 					ChatClient.getInstance().updateListUsersGui(ChatClient.getInstance().stringToList(data,";"));
-				} else if (type.equals("server")){ 
+				} else if (type.equals(MessageType.SERVER)){ 
 					//message from server
 					//remoteClientsInCommunication.get(from).writeToHistory(type, data);
 					ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(type, data);

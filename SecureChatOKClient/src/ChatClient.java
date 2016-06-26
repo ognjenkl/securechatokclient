@@ -2,23 +2,24 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,16 +34,14 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import org.bouncycastle.crypto.CipherParameters;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.omg.CORBA.StringValueHelper;
 
 import secureLib.CryptoImpl;
+import utilLib.MessageType;
 
 public class ChatClient {
 	
-	int serverPort = 1234;
 	Socket socket;
 	
 	//this user's username
@@ -67,18 +66,54 @@ public class ChatClient {
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
 	
 	private static ChatClient chatClient = null;
-    
+	
+	Properties properties = null;
+	FileInputStream fis = null;
+	String propIp = "";
+	int propPort = 0;
+	String propSymmetricOpModePaddingAes = "";
+	String propSymmetricOpModePadding3Des = "";
+	String propAsymmetricOpModePaddingRsa = "";
+	String propServerPublicKeyPath = "";
+	
     private ChatClient(){
-
-    	//username = "o2";
-    	
-    	//System.out.println("Client: "+username);
-    	//listChatUsersOnServer = new ArrayList<String>();
-    	listChatUsersOnServer = new CopyOnWriteArrayList<>();
-    	
-    	listUsersGuiModel = new DefaultListModel<String>();
-    	listUsersGui = new JList<String>(listUsersGuiModel);
-    	remoteClientsInCommunication = new ConcurrentHashMap<String, ChatClientThread>();
+    	try {
+	    	//username = "o2";
+	    	
+	    	//System.out.println("Client: "+username);
+	    	//listChatUsersOnServer = new ArrayList<String>();
+	    	listChatUsersOnServer = new CopyOnWriteArrayList<>();
+	    	
+	    	listUsersGuiModel = new DefaultListModel<String>();
+	    	listUsersGui = new JList<String>(listUsersGuiModel);
+	    	remoteClientsInCommunication = new ConcurrentHashMap<String, ChatClientThread>();
+	    	
+	    	properties = new Properties();
+	    	File fileProperties = new File("resources/config.properties");
+	    	if (fileProperties.exists()){
+	    		fis = new FileInputStream(fileProperties);
+				properties.load(fis);
+				
+				propIp = properties.getProperty("ip");
+				propPort = Integer.parseInt(properties.getProperty("port"));
+				propSymmetricOpModePaddingAes = properties.getProperty("symmetricOpModePaddingAes");
+				propSymmetricOpModePadding3Des = properties.getProperty("symmetricOpModePadding3Des");
+				propAsymmetricOpModePaddingRsa = properties.getProperty("asymmetricOpModePaddingRsa");
+				propServerPublicKeyPath = properties.getProperty("serverPublicKeyPath");
+			
+				fis.close();
+	    		
+	    	} else {
+	    		System.out.println("Ne postoji properties file");
+	    	}
+	    	
+    	} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
     
     public static ChatClient getInstance(){
@@ -112,11 +147,19 @@ public class ChatClient {
 		this.opModeSymmetric = opModeSymmetric;
 	}
 	
+	public byte[] getSymmetricKey() {
+		return symmetricKey;
+	}
+
+	public void setSymmetricKey(byte[] symmetricKey) {
+		this.symmetricKey = symmetricKey;
+	}
+
 	public void startClient(){
 		
 		try {
 
-			socket = new Socket("127.0.0.1", serverPort);
+			socket = new Socket(propIp, propPort);
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
 			
@@ -138,21 +181,21 @@ public class ChatClient {
 	}
 
 	public List<String> login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		String response = "";
 		List<String> usersList = null;
 		try {			
 			//json {"data":"og","from":"og","to":"s","type":"login"}
 			
-			String to = "s";
+			String to = MessageType.SERVER;
 			String from = usern;
-			String type = "login";
+			String type = MessageType.LOGIN;
 			String data = usern;
 			
 			sendMessageLogin(to, from, type, data);
 			
-			response = in.readLine();
+			String response = in.readLine();
+			String responseDecrypt = receiveMessage(response);
 			
-			usersList = stringToList(response,";");
+			usersList = stringToList(responseDecrypt,";");
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -179,19 +222,17 @@ public class ChatClient {
 	}
 	
 	public void sendMessageLogin(String to, String from, String type, String data) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		
 		try {
-			
-			
+	
 			if(Math.random() < 0.5){
-				opModeSymmetric = "AES/ECB/PKCS7Padding";
+				opModeSymmetric = propSymmetricOpModePaddingAes ;
 				symmetricKey = CryptoImpl.generateSecretKeyAES128();
 			}else{
-				 opModeSymmetric = "DESede/ECB/PKCS7Padding";
+				 opModeSymmetric = propSymmetricOpModePadding3Des;
 				 symmetricKey = CryptoImpl.generateDESede168Key();
 			}
 				
-			String opModeAsymmetric = "RSA/ECB/PKCS1Padding";
+			String opModeAsymmetric = propAsymmetricOpModePaddingRsa;
 			
 //			String opModeSymmetric = "AES/CBC/PKCS7Padding";
 	//		String opModeSymmetric = "AES/ECB/PKCS7Padding";
@@ -200,7 +241,7 @@ public class ChatClient {
 			
 			
 			
-			String publicKeyPath = "pki/srv2048.pub";
+			String publicKeyPath = propServerPublicKeyPath;
 			String privateKeyPath = "pki/" + username + "2048.key";
 			//String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
 			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
@@ -211,8 +252,8 @@ public class ChatClient {
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
 			
 			JSONObject jsonEnvelope = new JSONObject();
-			jsonEnvelope.put("key", symmetricKeyString);
-			jsonEnvelope.put("alg", opModeSymmetric);
+			jsonEnvelope.put(MessageType.KEY, symmetricKeyString);
+			jsonEnvelope.put(MessageType.ALGORITHM, opModeSymmetric);
 			System.out.println("client plain: " + jsonEnvelope.toString());
 			
 			byte[] envelopeMaterial = jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8);
@@ -224,7 +265,7 @@ public class ChatClient {
 
 			
 			String request = "";
-			String predefinedOKTag = "asymmOK";
+			String predefinedOKTag = MessageType.OK;
 			request = in.readLine();
 			byte[] requestDecoded = Base64.getDecoder().decode(request.getBytes(StandardCharsets.UTF_8));
 			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
@@ -251,6 +292,20 @@ public class ChatClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	
+	/**
+	 * Receive message and decrypt.
+	 * @param message
+	 * @return
+	 */
+	public String receiveMessage(String message){
+		byte[] messageDecoded = Base64.getDecoder().decode(message.getBytes(StandardCharsets.UTF_8));
+		byte[] messageDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, messageDecoded, false);
+		String messageString = new String(messageDecrypt, StandardCharsets.UTF_8);
+		
+		return messageString;
 	}
 	
 	public void startChatClientLoginGUI(){
@@ -294,7 +349,7 @@ public class ChatClient {
 					
 					//get a list of all logged users or null
 					listChatUsersOnServer = login(username);
-					System.out.println("Client: "+username );
+					System.out.println("Client: " + username );
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
@@ -375,7 +430,7 @@ public class ChatClient {
 		listUsersGuiModel.clear();
 		for(String user : users)
 			listUsersGuiModel.addElement(user);
-		System.out.println("update usernama: "+username);
+		System.out.println("update usernama: " + username);
 	}
 	
 	

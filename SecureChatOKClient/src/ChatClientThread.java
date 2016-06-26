@@ -6,6 +6,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Random;
 
 import javax.swing.JButton;
@@ -17,6 +19,9 @@ import javax.swing.JTextField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import secureLib.CryptoImpl;
+import utilLib.MessageType;
 
 public class ChatClientThread extends Thread {
 
@@ -47,6 +52,7 @@ public class ChatClientThread extends Thread {
 //		this.message = message;
 //		this.remoteClientsInCommunication = remoteClients;
 //	}
+	
 	
 	public ChatClientThread( String remoteClient, String message){
 		//this.socket = socket;
@@ -118,7 +124,7 @@ public class ChatClientThread extends Thread {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		message = messageTextField.getText();
             		//sendMessageAsJson(remoteClient, localClient, "chat", message);
-            		sendMessage(remoteClient, ChatClient.getInstance().getUsername(), "chat", message);
+            		sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, message);
             		//writeToHistory(localClient, message);
             		writeToHistory(ChatClient.getInstance().getUsername(), message);
             		messageTextField.setText("");
@@ -145,6 +151,22 @@ public class ChatClientThread extends Thread {
 	
 
 	
+//	public void sendMessage(String to, String from, String type, String data){
+//		JSONObject jsonObj = new JSONObject();
+//		try {
+//			jsonObj.put("to", to);
+//			jsonObj.put("from", from);
+//			jsonObj.put("type", type);
+//			jsonObj.put("data", data);
+//			//System.out.println("print raw json: " + jsonObj);
+//			out.println(jsonObj);
+//
+//		} catch (JSONException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//	}
+	
 	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
@@ -152,8 +174,12 @@ public class ChatClientThread extends Thread {
 			jsonObj.put("from", from);
 			jsonObj.put("type", type);
 			jsonObj.put("data", data);
-			//System.out.println("print raw json: " + jsonObj);
-			out.println(jsonObj);
+			
+			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
+			byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
+			String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
+			
+			out.println(cipherString);
 
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
