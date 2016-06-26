@@ -42,7 +42,7 @@ public class ChatClientThreadReader extends Thread{
 				//{"data":"og;dr;","from":"s","to":"og","type":"updateUsers"}
 				//{"data":"pozdrav og","from":"dr","to":"og","type":"chat"}
 				//{"data":"Korisnik \"og\" se odjavio!","from":"og","to":"dr","type":"server"}
-				System.out.println("Reader gets request: " + request);
+				//System.out.println("Reader gets request: " + request);
 				
 				String requestDecrypted = decryptMessage(request);
 				System.out.println("Reader gets request: " + requestDecrypted);
@@ -54,7 +54,6 @@ public class ChatClientThreadReader extends Thread{
 				
 				if(type.equals(MessageType.CHAT)){ 
 					//remote client wants to chat, 
-					//if(remoteClientsInCommunication.get(from) == null){
 					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
 						//if client is not in the list, create new chat thread and add it to the list
 						ChatClientThread cct = new ChatClientThread(from, data);
@@ -62,16 +61,15 @@ public class ChatClientThreadReader extends Thread{
 						cct.start();
 					}else
 						//else get the thread that already exists in the list
-						//remoteClientsInCommunication.get(from).writeToHistory(from, data);
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(from, data);
 				} else if (type.equals(MessageType.UPDATE)) {
 					//update users chat list
-					//chatClient.updateListUsersGui(chatClient.stringToList(data,";"));
 					ChatClient.getInstance().updateListUsersGui(ChatClient.getInstance().stringToList(data,";"));
 				} else if (type.equals(MessageType.SERVER)){ 
 					//message from server
-					//remoteClientsInCommunication.get(from).writeToHistory(type, data);
 					ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(type, data);
+				} else if (type.equals(MessageType.PUBLICKEY)){
+					
 				} else {
 					System.out.println("ChatClientReader nepoznat type poruke");
 				}

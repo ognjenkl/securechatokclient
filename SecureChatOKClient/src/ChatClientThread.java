@@ -222,12 +222,12 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void requestRemoteClientPublicKey() throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
-		String response = "";
+//		String response = "";
 		sendMessage(MessageType.SERVER, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, "");
-		response = in.readLine();
-		System.out.println("nesto stiglo: " + response );
-		String responseDecrypted = decryptMessage(response);
-		System.out.println("nesto stiglo: " + responseDecrypted );
+//		response = in.readLine();
+//		System.out.println("nesto stiglo: " + response );
+//		String responseDecrypted = decryptMessage(response);
+//		System.out.println("nesto stiglo: " + responseDecrypted );
 		
 	}
 

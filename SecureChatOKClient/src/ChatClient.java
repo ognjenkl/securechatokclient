@@ -206,9 +206,14 @@ public class ChatClient {
 			String response = in.readLine();
 			String responseDecrypt = decryptMessage(response);
 			
-			usersList = stringToList(responseDecrypt,";");
+			JSONObject jsonResp = new JSONObject(responseDecrypt);
+			
+			usersList = stringToList(jsonResp.getString("data"),";");
 			
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
@@ -361,12 +366,12 @@ public class ChatClient {
 					
 					//get a list of all logged users or null
 					listChatUsersOnServer = login(username);
+					
 					System.out.println("Client: " + username );
+					System.out.println("List of loggedin clients: " + listChatUsersOnServer.size());
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
-						
-						
 						
 						startChatClientGUI(listChatUsersOnServer);
 						
@@ -390,7 +395,7 @@ public class ChatClient {
 		frameLogin.setVisible(true);
 	}
 
-	public void startChatClientGUI(List<String> clients){
+	public synchronized void startChatClientGUI(List<String> clients){
 		JFrame frameChatClientGUI = new JFrame("Chat Client");
 		JPanel panelChatClient = new JPanel();
 		JLabel welcomeLabel = new JLabel("Welcome: "+username);
@@ -437,7 +442,7 @@ public class ChatClient {
 		listUsersGuiModel.clear();
 		for(String user : users)
 			listUsersGuiModel.addElement(user);
-		System.out.println("update usernama: " + username);
+		System.out.println("updated gui for: " + username);
 	}
 	
 	
