@@ -83,6 +83,8 @@ public class ChatClientThread extends Thread {
 		//this.remoteClientsInCommunication = remoteClients;
 		try {
 			in = new BufferedReader(new InputStreamReader(ChatClient.getInstance().getSocket().getInputStream()));
+			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -90,17 +92,18 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void run(){
-			try {
+//			try {
 				//out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())),true);
-				out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
+				// prebacen u konstruktor
+				//out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(ChatClient.getInstance().getSocket().getOutputStream())),true);
 				
 			if(frame == null)
 					startGUI();
 				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}		
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}		
 	}
 	
 	
@@ -221,9 +224,8 @@ public class ChatClientThread extends Thread {
 		messageHistory.append(user + ":" + message + "\n" );
 	}
 	
-	public void requestRemoteClientPublicKey() throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
-//		String response = "";
-		sendMessage(MessageType.SERVER, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, "");
+	public void requestRemoteClientPublicKey(String user) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
+		sendMessage(user, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, user);
 //		response = in.readLine();
 //		System.out.println("nesto stiglo: " + response );
 //		String responseDecrypted = decryptMessage(response);

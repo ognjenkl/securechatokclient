@@ -62,7 +62,7 @@ public class ChatClient {
 	String opModeSymmetric = "";
 	byte[] symmetricKey = null;
 	
-	
+	Object lockObj = null;
 	
 	//remote clients as key to which this client's thread is in communication with
 	ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication;
@@ -104,6 +104,8 @@ public class ChatClient {
 				propServerPublicKeyPath = properties.getProperty("serverPublicKeyPath");
 			
 				fis.close();
+				
+				lockObj = new Object();
 	    		
 	    	} else {
 	    		System.out.println("Ne postoji properties file");
@@ -173,6 +175,15 @@ public class ChatClient {
 		this.remoteClientsInCommunication = remoteClientsInCommunication;
 	}
 	
+	
+	public synchronized Object getLockObj() {
+		return lockObj;
+	}
+
+	public synchronized void setLockObj(Object lockObj) {
+		this.lockObj = lockObj;
+	}
+
 	public void startClient(){
 		
 		try {
@@ -262,7 +273,7 @@ public class ChatClient {
 			//String absoluteKeyPath = System.getProperty("user.dir") + "\\pki\\og2048.pem";
 			KeyPair privateKeyPair = CryptoImpl.getKeyPair(privateKeyPath);
 			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
-			
+			System.out.println("drugi public: "+publicKey.toString());
 			
 			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
@@ -427,6 +438,36 @@ public class ChatClient {
 					String remoteUser = listUsersGui.getSelectedValue();
 					ChatClientThread cct = new ChatClientThread( remoteUser , null);
 					remoteClientsInCommunication.put(remoteUser, cct);
+
+					try {
+						cct.requestRemoteClientPublicKey(remoteUser);
+						synchronized (cct) {
+							cct.wait();
+							System.out.println("Poslije wait-a :D");
+						}
+					} catch (InvalidKeyException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (NoSuchAlgorithmException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (NoSuchPaddingException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (InvalidKeySpecException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (InvalidAlgorithmParameterException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
 					cct.start();
 				}
 				

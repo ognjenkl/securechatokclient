@@ -48,6 +48,7 @@ public class ChatClientThreadReader extends Thread{
 				System.out.println("Reader gets request: " + requestDecrypted);
 				
 				JSONObject jsonObject = new JSONObject(requestDecrypted);
+				String to = jsonObject.getString("to");
 				String from = jsonObject.getString("from");
 				String type = jsonObject.getString("type");
 				String data = jsonObject.getString("data");
@@ -69,7 +70,11 @@ public class ChatClientThreadReader extends Thread{
 					//message from server
 					ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(type, data);
 				} else if (type.equals(MessageType.PUBLICKEY)){
-					
+					System.out.println("To: " + to + "||| Public key: " + data);
+					synchronized (ChatClient.getInstance().getRemoteClientsInCommunication().get(from)) {
+						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).notify();
+						
+					}
 				} else {
 					System.out.println("ChatClientReader nepoznat type poruke");
 				}
