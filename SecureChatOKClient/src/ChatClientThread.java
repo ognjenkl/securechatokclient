@@ -11,8 +11,8 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -26,7 +26,6 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-import org.bouncycastle.util.Encodable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -162,7 +161,6 @@ public class ChatClientThread extends Thread {
                 			//cipher
                 			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
                 			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
-                			
                 			//digest
                 			byte[] digest = null;
                 			if(Math.random() < 0.5){
@@ -173,9 +171,9 @@ public class ChatClientThread extends Thread {
                 				digest = CryptoImpl.hash(hashFunction, cipher);
                 				
                 			}
+                			
                 			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
                 			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);
-                			
                 			JSONObject jsonChatKey = new JSONObject();
                 			jsonChatKey.put(MessageType.KEY, tempSymmetricKeyEncodedString);
                 			jsonChatKey.put(MessageType.ALGORITHM, opModeSymmetric);
@@ -195,12 +193,14 @@ public class ChatClientThread extends Thread {
                 			
                 			sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHATKEY, jsonMessage.toString());
                 		}
+                		
+                		//ceka da se zavrsi verifikacija i dode odgovor da je sve ok
                 		synchronized (this) {
     						this.wait();
     					}
+                		
                 		System.out.println("idemo dalje");
                 		//sendMessageChat(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, data);
-                		
                 		writeToHistory(ChatClient.getInstance().getUsername(), message);
                 		messageTextField.setText("");
             			
@@ -359,7 +359,20 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void requestRemoteClientPublicKey(String user) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
+//		PublicKey pubKey = null;
 		sendMessage(user, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, user);
+// ne valjda jer treba ChatClientReader da pronade i pusti odredeni thread koji je vec dodat u niz thread-ova
+//		synchronized (this) {
+//			try {
+//				this.wait();
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			pubKey = remotePublicKey;
+//		}
+//		
+//		return pubKey;
 	}
 
 }

@@ -105,7 +105,7 @@ public class ChatClient {
 			
 				fis.close();
 				
-				privateKeyPair = CryptoImpl.getKeyPair("pki/" + username + "2048.key");
+				
 				
 	    	} else {
 	    		System.out.println("Ne postoji properties file");
@@ -282,8 +282,7 @@ public class ChatClient {
 				 symmetricKey = CryptoImpl.generateDESede168Key();
 			}
 				
-			String opModeAsymmetric = propAsymmetricOpModePaddingRsa;
-			
+			opModeAsymmetric = propAsymmetricOpModePaddingRsa;
 //			String opModeSymmetric = "AES/CBC/PKCS7Padding";
 	//		String opModeSymmetric = "AES/ECB/PKCS7Padding";
 	//		String opModeSymmetric = "DESede/ECB/PKCS7Padding";
@@ -394,6 +393,8 @@ public class ChatClient {
 				try{
 					
 					username = usernameTextField.getText();
+					
+					privateKeyPair = CryptoImpl.getKeyPair("pki/" + username + "2048.key");
 					
 					//get a list of all logged users or null
 					listChatUsersOnServer = login(username);

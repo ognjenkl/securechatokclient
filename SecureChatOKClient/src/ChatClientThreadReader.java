@@ -2,14 +2,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
-import org.bouncycastle.crypto.util.PublicKeyFactory;
+import javax.crypto.NoSuchPaddingException;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -54,7 +55,7 @@ public class ChatClientThreadReader extends Thread{
 				System.out.println("Reader gets request (decrypted): " + requestDecrypted);
 				
 				JSONObject jsonObject = new JSONObject(requestDecrypted);
-				String to = jsonObject.getString("to");
+				//String to = jsonObject.getString("to");
 				String from = jsonObject.getString("from");
 				String type = jsonObject.getString("type");
 				String data = jsonObject.getString("data");
@@ -86,8 +87,29 @@ public class ChatClientThreadReader extends Thread{
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).notify();
 					}
 				} else if (type.equals(MessageType.CHATKEY)) {
-					
+					System.out.println("chatkey request: " + data);
 					//provjeriti da li je poruka ispravna verifikovati
+					JSONObject jsonToVerify = new JSONObject(data);
+					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
+						//if client is not in the list, create new chat thread and add it to the list
+						ChatClientThread cct = new ChatClientThread(from, null);
+						ChatClient.getInstance().getRemoteClientsInCommunication().put(from, cct);
+						cct.requestRemoteClientPublicKey(from);
+
+						//ceka da dobije javni kljuc ovja cct thread
+						synchronized (cct) {
+							cct.wait();
+						}
+						System.out.println("Stigaooooooooooooooooooooooooooooooooooooooo");
+						PublicKey pubKey = cct.getRemotePublicKey();
+//						if(pubKey != null)
+//						if(CryptoImpl.verifyDigitalSignature(jsonToVerify.getString("cipher"), jsonToVerify.getString("envelope"), jsonToVerify.getString("digsig"), )){
+//							
+//							cct.start();
+//						
+//						}
+					}
+					
 					// a zatim odgovoriti 
 				} else if (type.equals(MessageType.CHATKEYOK)) {
 					// odgovoro od chatkey treba da se ovdje uhvati kod drugog clienta
@@ -102,6 +124,24 @@ public class ChatClientThreadReader extends Thread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchPaddingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidAlgorithmParameterException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
