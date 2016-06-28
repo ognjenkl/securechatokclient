@@ -36,6 +36,7 @@ import javax.swing.JTextField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.omg.CORBA.SystemException;
 
 import secureLib.CryptoImpl;
 import secureUtil.MessageType;
@@ -50,8 +51,11 @@ public class ChatClient {
 	BufferedReader in;
 	PrintWriter out;
 	
-	//users logedin on server
+	//users loggedin on server
 	List<String> listChatUsersOnServer;
+	
+	//users loggedin on server and their public keys
+	ConcurrentHashMap<String, PublicKey> usersAndPublicKeys;
 	
 	//list of users on server for chat, gui component
 	JList<String> listUsersGui;
@@ -89,6 +93,7 @@ public class ChatClient {
 	    	listUsersGuiModel = new DefaultListModel<String>();
 	    	listUsersGui = new JList<String>(listUsersGuiModel);
 	    	remoteClientsInCommunication = new ConcurrentHashMap<String, ChatClientThread>();
+	    	usersAndPublicKeys = new ConcurrentHashMap<>();
 	    	
 	    	properties = new Properties();
 	    	File fileProperties = new File("resources/config.properties");
@@ -207,6 +212,14 @@ public class ChatClient {
 		this.privateKeyPair = privateKeyPair;
 	}
 
+	public synchronized ConcurrentHashMap<String, PublicKey> getUsersAndPublicKeys() {
+		return usersAndPublicKeys;
+	}
+
+	public synchronized void setUsersAndPublicKeys(ConcurrentHashMap<String, PublicKey> usersAndPublicKeys) {
+		this.usersAndPublicKeys = usersAndPublicKeys;
+	}
+
 	public void startClient(){
 		
 		try {
@@ -225,8 +238,8 @@ public class ChatClient {
 	}
 
 
-	public List<String> login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		List<String> usersList = null;
+	public String login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
+		JSONObject jsonResp = null;
 		try {			
 			//json {"data":"og","from":"og","to":"s","type":"login"}
 			
@@ -240,9 +253,9 @@ public class ChatClient {
 			String response = in.readLine();
 			String responseDecrypt = decryptMessage(response);
 			
-			JSONObject jsonResp = new JSONObject(responseDecrypt);
+			jsonResp = new JSONObject(responseDecrypt);
+			//usersList = stringToList(jsonResp.getString("data"),";");
 			
-			usersList = stringToList(jsonResp.getString("data"),";");
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -252,8 +265,8 @@ public class ChatClient {
 			e.printStackTrace();
 		} 
 		
-		return usersList;
-
+		//return usersList;
+		return jsonResp.toString();
 	}
 	
 	public List<String> stringToList(String message, String delimiter){
@@ -317,7 +330,7 @@ public class ChatClient {
 			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
 			String requestString = new String(requestDecrypt, StandardCharsets.UTF_8);
 			if(requestString.equals(predefinedOKTag)){
-				System.out.println("Predefined OK: " + requestString);
+				//System.out.println("Predefined OK: " + requestString);
 				
 				JSONObject jsonObj = new JSONObject();
 				jsonObj.put("to", to);
@@ -390,36 +403,56 @@ public class ChatClient {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				try{
+				try {
 					
 					username = usernameTextField.getText();
 					
 					privateKeyPair = CryptoImpl.getKeyPair("pki/" + username + "2048.key");
 					
 					//get a list of all logged users or null
-					listChatUsersOnServer = login(username);
+					String str = login(username);
+					JSONObject jsonLogin = new JSONObject(str);
+					JSONObject jsonLoginData = new JSONObject(jsonLogin.getString("data"));
+					listChatUsersOnServer = stringToList(jsonLoginData.getString("clients"), ";");
 					
 					System.out.println("Client: " + username );
 					//System.out.println("List of loggedin clients: " + listChatUsersOnServer.size());
 					if(listChatUsersOnServer != null){
 						
 						loginError.setText("");
-						
-						startChatClientGUI(listChatUsersOnServer);
+						System.out.println("json login data: " + jsonLoginData.toString());
+						startChatClientGUI(jsonLoginData.toString());
 						
 						ChatClientThreadReader cctr = new ChatClientThreadReader();
 						cctr.start();
 						
 						frameLogin.setVisible(false);
+					} else {
+						System.out.println("Conncection failed!");
+						loginError.setText("Login failed!");
 					}
-					else {
-						System.out.println("Conncection failed");
-						loginError.setText("Login failed");
-					}
-				} catch (Exception ex){
-					System.out.println("Login failed");
-					loginError.setText("Login failed");
-				}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (InvalidKeyException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (NoSuchAlgorithmException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (NoSuchPaddingException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (InvalidKeySpecException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (InvalidAlgorithmParameterException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (JSONException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} 
 			}
 		});
 		
@@ -427,12 +460,12 @@ public class ChatClient {
 		frameLogin.setVisible(true);
 	}
 
-	public synchronized void startChatClientGUI(List<String> clients){
+	public synchronized void startChatClientGUI(String clientsWithPubKeys){
 		JFrame frameChatClientGUI = new JFrame("Chat Client");
 		JPanel panelChatClient = new JPanel();
 		JLabel welcomeLabel = new JLabel("Welcome: "+username);
 		//listUsersGui = new JList<String>(clients.toArray(new String[clients.size()]));
-		updateListUsersGui(clients);
+		updateListUsersGui(clientsWithPubKeys);
 		JButton buttonStartChat = new JButton("Start Chat");
 		
 		frameChatClientGUI.setSize(600, 600);
@@ -503,14 +536,34 @@ public class ChatClient {
 		
 	}
 	
-	public synchronized void updateListUsersGui(List<String> users){
+//	public synchronized void updateListUsersGui(List<String> users){
+//		listUsersGuiModel.clear();
+//		for(String user : users)
+//			listUsersGuiModel.addElement(user);
+//		System.out.println("updated gui for: " + username);
+//	}
+	
+	public synchronized void updateListUsersGui(String clientsWithPubKeys){
+		
 		listUsersGuiModel.clear();
-		for(String user : users)
-			listUsersGuiModel.addElement(user);
-		System.out.println("updated gui for: " + username);
+		JSONObject jsonObj;
+		try {
+			jsonObj = new JSONObject(clientsWithPubKeys);
+			
+			List<String> users = stringToList(jsonObj.getString("clients"), ";");
+			for(String user : users){
+				listUsersGuiModel.addElement(user);
+				PublicKey pubKey =  CryptoImpl.deserializeRsaPublicKey(jsonObj.getString(user));
+				usersAndPublicKeys.put(user, pubKey);
+			}
+			
+			System.out.println("updated gui for: " + username);
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
-	
-	
 	
 	public static void main(String[] args) {
 		

@@ -158,19 +158,23 @@ public class ChatClientThread extends Thread {
                 			}
                 			String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(tempSymmetrickey),StandardCharsets.UTF_8);
                 			
+                			String mess = MessageType.OK;
                 			//cipher
-                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
+                			//byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
+                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(mess.getBytes(StandardCharsets.UTF_8)), true);
                 			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
                 			//digest
                 			byte[] digest = null;
                 			if(Math.random() < 0.5){
                 				hashFunction = MessageType.SHA256;
-                				digest = CryptoImpl.hash(hashFunction, cipher);
+                				//digest = CryptoImpl.hash(hashFunction, cipher);
                 			} else {
                 				hashFunction = MessageType.SHA512;
-                				digest = CryptoImpl.hash(hashFunction, cipher);
-                				
+                				//digest = CryptoImpl.hash(hashFunction, cipher);
                 			}
+                				
+                			digest = CryptoImpl.hash(hashFunction, mess.getBytes(StandardCharsets.UTF_8));
+                			
                 			
                 			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
                 			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);

@@ -72,7 +72,8 @@ public class ChatClientThreadReader extends Thread{
 						ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(from, data);
 				} else if (type.equals(MessageType.UPDATE)) {
 					//update users chat list
-					ChatClient.getInstance().updateListUsersGui(ChatClient.getInstance().stringToList(data,";"));
+					//ChatClient.getInstance().updateListUsersGui(ChatClient.getInstance().stringToList(data,";"));
+					ChatClient.getInstance().updateListUsersGui(data);
 				} else if (type.equals(MessageType.SERVER)){ 
 					//message from server
 					ChatClient.getInstance().getRemoteClientsInCommunication().get(from).writeToHistory(type, data);
@@ -90,27 +91,15 @@ public class ChatClientThreadReader extends Thread{
 					System.out.println("chatkey request: " + data);
 					//provjeriti da li je poruka ispravna verifikovati
 					JSONObject jsonToVerify = new JSONObject(data);
-					if(ChatClient.getInstance().getRemoteClientsInCommunication().get(from) == null){
-						//if client is not in the list, create new chat thread and add it to the list
-						ChatClientThread cct = new ChatClientThread(from, null);
-						ChatClient.getInstance().getRemoteClientsInCommunication().put(from, cct);
-						cct.requestRemoteClientPublicKey(from);
-
-						//ceka da dobije javni kljuc ovja cct thread
-						synchronized (cct) {
-							cct.wait();
-						}
-						System.out.println("Stigaooooooooooooooooooooooooooooooooooooooo");
-						PublicKey pubKey = cct.getRemotePublicKey();
-//						if(pubKey != null)
-//						if(CryptoImpl.verifyDigitalSignature(jsonToVerify.getString("cipher"), jsonToVerify.getString("envelope"), jsonToVerify.getString("digsig"), )){
-//							
-//							cct.start();
-//						
-//						}
-					}
+					PublicKey pubKey = ChatClient.getInstance().getUsersAndPublicKeys().get(from);
+					if(CryptoImpl.verifyDigitalSignature(jsonToVerify.getString(MessageType.CIPHER), jsonToVerify.getString(MessageType.ENVELOPE), jsonToVerify.getString(MessageType.DIGSIG), pubKey, ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair()))
+						System.out.println("Digitalni potpis ISPRAVAN");
+					else
+						System.out.println("Digitalni potpis NIJE ispravan");
 					
-					// a zatim odgovoriti 
+					
+					///////////////////////////////////////////////// treba  odgovoriti 
+						
 				} else if (type.equals(MessageType.CHATKEYOK)) {
 					// odgovoro od chatkey treba da se ovdje uhvati kod drugog clienta
 					// da se setuje symmetricKey izmedu dva client-a za secure chat komunikaciju
@@ -124,24 +113,6 @@ public class ChatClientThreadReader extends Thread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchPaddingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeySpecException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidAlgorithmParameterException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
