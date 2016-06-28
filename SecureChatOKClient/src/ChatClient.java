@@ -36,7 +36,6 @@ import javax.swing.JTextField;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.omg.CORBA.SystemException;
 
 import secureLib.CryptoImpl;
 import secureUtil.MessageType;
@@ -494,39 +493,8 @@ public class ChatClient {
 					remoteClientsInCommunication.put(remoteUser, cct);
 
 					cct.setRemotePublicKey(usersAndPublicKeys.get(remoteUser));
-//					try {
-//						cct.requestRemoteClientPublicKey(remoteUser);
-//						
-//						synchronized (cct) {
-//							cct.wait();
-//						}
-						
-						cct.start();
-						
-//					} catch (InvalidKeyException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (NoSuchAlgorithmException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (NoSuchPaddingException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (InvalidKeySpecException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (InvalidAlgorithmParameterException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (IOException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					} catch (InterruptedException e1) {
-//						// TODO Auto-generated catch block
-//						e1.printStackTrace();
-//					}
-					
-					
+					cct.start();
+				
 				}
 				
 			}
@@ -536,13 +504,6 @@ public class ChatClient {
 		frameChatClientGUI.setVisible(true);
 		
 	}
-	
-//	public synchronized void updateListUsersGui(List<String> users){
-//		listUsersGuiModel.clear();
-//		for(String user : users)
-//			listUsersGuiModel.addElement(user);
-//		System.out.println("updated gui for: " + username);
-//	}
 	
 	public synchronized void updateListUsersGui(String clientsWithPubKeys){
 		

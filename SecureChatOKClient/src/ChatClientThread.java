@@ -90,11 +90,9 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void run(){
-				
-			if(frame == null)
-					startGUI();
-				
-			//System.out.println("ChatClientThrad public key: " + remotePublicKey);
+
+		if(frame == null)
+				startGUI();
 	}
 	
 	
@@ -160,26 +158,17 @@ public class ChatClientThread extends Thread {
                 				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
                 			}
                 			
-                			
-                			//String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(tempSymmetrickey),StandardCharsets.UTF_8);
                 			String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(symmetricKeyChat),StandardCharsets.UTF_8);
                 			
-                			//String mess = MessageType.OK;
-                			//cipher
-                			//byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
-                			//byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(message.getBytes(StandardCharsets.UTF_8)), true);
                 			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKeyChat, Base64.getEncoder().encode(message.getBytes(StandardCharsets.UTF_8)), true);
                 			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
+
                 			//digest
-                			
-                			if(Math.random() < 0.5){
+               				if(Math.random() < 0.5){
                 				hashFunction = MessageType.SHA256;
-                				//digest = CryptoImpl.hash(hashFunction, cipher);
                 			} else {
                 				hashFunction = MessageType.SHA512;
-                				//digest = CryptoImpl.hash(hashFunction, cipher);
                 			}
-                			
                 			byte[] digest = CryptoImpl.hash(hashFunction, message.getBytes(StandardCharsets.UTF_8));
                 			
                 			System.out.println("temp: message " + message);
@@ -231,13 +220,6 @@ public class ChatClientThread extends Thread {
                 		
                 		}
                 		
-                		//ceka da se zavrsi verifikacija i dode odgovor da je sve ok
-//                		synchronized (this) {
-//    						this.wait();
-//    					}
-                		
-                		System.out.println("idemo dalje");
-                		//sendMessageChat(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, data);
                 		writeToHistory(ChatClient.getInstance().getUsername(), message);
                 		messageTextField.setText("");
             			
@@ -343,32 +325,6 @@ public class ChatClientThread extends Thread {
 	}
 	
 	/**
-	 * Sends message with encrypted symmetric key
-	 * 
-	 * @param to
-	 * @param from
-	 * @param type
-	 * @param data
-	 */
-	public void sendMessageChatKey(String to, String from, String type, String data){
-//		JSONObject jsonObj = new JSONObject();
-//		try {
-//			jsonObj.put("to", to);
-//			jsonObj.put("from", from);
-//			jsonObj.put("type", type);
-//			jsonObj.put("data", data);
-//			
-//			
-//			out.println();
-//
-//		} catch (JSONException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		sendMessage(to, from, type, data);
-	}
-
-	/**
 	 * Sends chat message.
 	 * 
 	 * @param to
@@ -386,7 +342,6 @@ public class ChatClientThread extends Thread {
 				 opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePadding3Des();
 				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
 			}
-			
 		}
 		
 		JSONObject jsonObj = new JSONObject();
@@ -414,20 +369,7 @@ public class ChatClientThread extends Thread {
 	}
 	
 	public void requestRemoteClientPublicKey(String user) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException {
-//		PublicKey pubKey = null;
 		sendMessage(user, ChatClient.getInstance().getUsername(), MessageType.PUBLICKEY, user);
-// ne valjda jer treba ChatClientReader da pronade i pusti odredeni thread koji je vec dodat u niz thread-ova
-//		synchronized (this) {
-//			try {
-//				this.wait();
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//			pubKey = remotePublicKey;
-//		}
-//		
-//		return pubKey;
 	}
 
 }
