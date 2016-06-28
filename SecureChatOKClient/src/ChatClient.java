@@ -493,37 +493,38 @@ public class ChatClient {
 					ChatClientThread cct = new ChatClientThread( remoteUser , null);
 					remoteClientsInCommunication.put(remoteUser, cct);
 
-					try {
-						cct.requestRemoteClientPublicKey(remoteUser);
-						
-						synchronized (cct) {
-							cct.wait();
-						}
+					cct.setRemotePublicKey(usersAndPublicKeys.get(remoteUser));
+//					try {
+//						cct.requestRemoteClientPublicKey(remoteUser);
+//						
+//						synchronized (cct) {
+//							cct.wait();
+//						}
 						
 						cct.start();
 						
-					} catch (InvalidKeyException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (NoSuchAlgorithmException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (NoSuchPaddingException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (InvalidKeySpecException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (InvalidAlgorithmParameterException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
+//					} catch (InvalidKeyException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (NoSuchAlgorithmException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (NoSuchPaddingException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (InvalidKeySpecException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (InvalidAlgorithmParameterException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (IOException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					} catch (InterruptedException e1) {
+//						// TODO Auto-generated catch block
+//						e1.printStackTrace();
+//					}
 					
 					
 				}
