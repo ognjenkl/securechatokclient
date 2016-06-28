@@ -322,13 +322,16 @@ public class ChatClient {
 			out.println(envelopeString);
 
 			
-			String request = "";
+			String response = "";
 			String predefinedOKTag = MessageType.lOGINOK;
-			request = in.readLine();
-			byte[] requestDecoded = Base64.getDecoder().decode(request.getBytes(StandardCharsets.UTF_8));
-			byte[] requestDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, requestDecoded, false);
-			String requestString = new String(requestDecrypt, StandardCharsets.UTF_8);
-			if(requestString.equals(predefinedOKTag)){
+			
+			//server response
+			response = in.readLine();
+			
+			byte[] responseDecoded = Base64.getDecoder().decode(response.getBytes(StandardCharsets.UTF_8));
+			byte[] responseDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, responseDecoded, false);
+			String responseString = new String(responseDecrypt, StandardCharsets.UTF_8);
+			if(responseString.equals(predefinedOKTag)){
 				//System.out.println("Predefined OK: " + requestString);
 				
 				JSONObject jsonObj = new JSONObject();
@@ -406,30 +409,40 @@ public class ChatClient {
 					
 					username = usernameTextField.getText();
 					
-					privateKeyPair = CryptoImpl.getKeyPair("pki/" + username + "2048.key");
+					File privateKeyPairFile = new File("pki/" + username + "2048.key");
 					
-					//get a list of all logged users or null
-					String str = login(username);
-					JSONObject jsonLogin = new JSONObject(str);
-					JSONObject jsonLoginData = new JSONObject(jsonLogin.getString("data"));
-					listChatUsersOnServer = stringToList(jsonLoginData.getString("clients"), ";");
+					if(privateKeyPairFile.exists()){
+						privateKeyPair = CryptoImpl.getKeyPair(privateKeyPairFile);
 					
-					System.out.println("Client: " + username );
-					//System.out.println("List of loggedin clients: " + listChatUsersOnServer.size());
-					if(listChatUsersOnServer != null){
+					
+						//login - get a list of all logged users and their public keys or null
+						String str = login(username);
 						
-						loginError.setText("");
-						System.out.println("json login data: " + jsonLoginData.toString());
-						startChatClientGUI(jsonLoginData.toString());
+						JSONObject jsonLogin = new JSONObject(str);
+						JSONObject jsonLoginData = new JSONObject(jsonLogin.getString("data"));
+						listChatUsersOnServer = stringToList(jsonLoginData.getString("clients"), ";");
 						
-						ChatClientThreadReader cctr = new ChatClientThreadReader();
-						cctr.start();
-						
-						frameLogin.setVisible(false);
+						System.out.println("Client: " + username );
+						if(listChatUsersOnServer != null){
+							
+							loginError.setText("");
+							System.out.println("json login data: " + jsonLoginData.toString());
+							startChatClientGUI(jsonLoginData.toString());
+							
+							ChatClientThreadReader cctr = new ChatClientThreadReader();
+							cctr.start();
+							
+							frameLogin.setVisible(false);
+						} else {
+							System.out.println("Conncection failed!");
+							loginError.setText("Login failed!");
+						}
 					} else {
-						System.out.println("Conncection failed!");
-						loginError.setText("Login failed!");
+						System.out.println("Nema privatnog kljuca na putanji: " + privateKeyPairFile.getPath());
+						loginError.setText("Neuspjesno logovanje");
 					}
+					
+					
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
