@@ -67,13 +67,14 @@ public class ChatClientThread extends Thread {
 	 * Symmetric (secret) key for chat communication.
 	 */
 	byte[] symmetricKeyChat = null;
+	String opModeSymmetric = "";
 	
 	/**
 	 * Hash function
 	 */
 	String hashFunction = "";
 	
-	String opModeSymmetric = "";
+	
 	
 	public ChatClientThread( String remoteClient, String message){
 		this.remoteClient = remoteClient;
@@ -148,23 +149,29 @@ public class ChatClientThread extends Thread {
                 		
                 		if(symmetricKeyChat == null){
                 			
-                			byte[] tempSymmetrickey = null;
+                			//byte[] tempSymmetrickey = null;
                 			if(Math.random() < 0.5){
                 				opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePaddingAes();
-                				tempSymmetrickey = CryptoImpl.generateSecretKeyAES128();
+                				//tempSymmetrickey = CryptoImpl.generateSecretKeyAES128();
+                				symmetricKeyChat = CryptoImpl.generateSecretKeyAES128();
                 			} else {
                 				 opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePadding3Des();
-                				 tempSymmetrickey = CryptoImpl.generateDESede168Key();
+                				 //tempSymmetrickey = CryptoImpl.generateDESede168Key();
+                				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
                 			}
-                			String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(tempSymmetrickey),StandardCharsets.UTF_8);
                 			
-                			String mess = MessageType.OK;
+                			
+                			//String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(tempSymmetrickey),StandardCharsets.UTF_8);
+                			String tempSymmetricKeyEncodedString = new String( Base64.getEncoder().encode(symmetricKeyChat),StandardCharsets.UTF_8);
+                			
+                			//String mess = MessageType.OK;
                 			//cipher
                 			//byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(MessageType.OK.getBytes(StandardCharsets.UTF_8)), true);
-                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(mess.getBytes(StandardCharsets.UTF_8)), true);
+                			//byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, tempSymmetrickey, Base64.getEncoder().encode(message.getBytes(StandardCharsets.UTF_8)), true);
+                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKeyChat, Base64.getEncoder().encode(message.getBytes(StandardCharsets.UTF_8)), true);
                 			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
                 			//digest
-                			byte[] digest = null;
+                			
                 			if(Math.random() < 0.5){
                 				hashFunction = MessageType.SHA256;
                 				//digest = CryptoImpl.hash(hashFunction, cipher);
@@ -172,12 +179,19 @@ public class ChatClientThread extends Thread {
                 				hashFunction = MessageType.SHA512;
                 				//digest = CryptoImpl.hash(hashFunction, cipher);
                 			}
-                				
-                			digest = CryptoImpl.hash(hashFunction, mess.getBytes(StandardCharsets.UTF_8));
                 			
+                			byte[] digest = CryptoImpl.hash(hashFunction, message.getBytes(StandardCharsets.UTF_8));
                 			
+                			System.out.println("temp: message " + message);
+                			System.out.println("temp: hashFunction " + hashFunction);
+                			System.out.println("temp: opmode" + ChatClient.getInstance().getOpModeAsymmetric());
+                			System.out.println("temp: private" + ChatClient.getInstance().getPrivateKeyPair().getPrivate());
+                			System.out.println("temp: digest " + digest);
+                			
+
                 			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
                 			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);
+                			
                 			JSONObject jsonChatKey = new JSONObject();
                 			jsonChatKey.put(MessageType.KEY, tempSymmetricKeyEncodedString);
                 			jsonChatKey.put(MessageType.ALGORITHM, opModeSymmetric);
@@ -196,22 +210,38 @@ public class ChatClientThread extends Thread {
                 			
                 			
                 			sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHATKEY, jsonMessage.toString());
+                		} else{
+                			
+                			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKeyChat, Base64.getEncoder().encode(message.getBytes(StandardCharsets.UTF_8)), true);
+                			String cipherString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
+                			
+                			//digest
+                			byte[] digest = null;
+                			digest = CryptoImpl.hash(hashFunction, message.getBytes(StandardCharsets.UTF_8));
+                			
+                			//digital signature
+                			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
+                			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);
+     
+                			JSONObject jsonMessage = new JSONObject();
+                			jsonMessage.put(MessageType.DIGSIG, digitalSignaturString);
+                			jsonMessage.put(MessageType.CIPHER, cipherString);
+                			
+                			sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, jsonMessage.toString());
+                		
                 		}
                 		
                 		//ceka da se zavrsi verifikacija i dode odgovor da je sve ok
-                		synchronized (this) {
-    						this.wait();
-    					}
+//                		synchronized (this) {
+//    						this.wait();
+//    					}
                 		
                 		System.out.println("idemo dalje");
                 		//sendMessageChat(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, data);
                 		writeToHistory(ChatClient.getInstance().getUsername(), message);
                 		messageTextField.setText("");
             			
-            		} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (JSONException e1) {
+            		} catch (JSONException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
@@ -244,6 +274,30 @@ public class ChatClientThread extends Thread {
 
 	public synchronized void setRemotePublicKey(PublicKey remotePublicKey) {
 		this.remotePublicKey = remotePublicKey;
+	}
+
+	public byte[] getSymmetricKeyChat() {
+		return symmetricKeyChat;
+	}
+
+	public void setSymmetricKeyChat(byte[] symmetricKeyChat) {
+		this.symmetricKeyChat = symmetricKeyChat;
+	}
+
+	public synchronized String getOpModeSymmetric() {
+		return opModeSymmetric;
+	}
+
+	public synchronized void setOpModeSymmetric(String opModeSymmetric) {
+		this.opModeSymmetric = opModeSymmetric;
+	}
+
+	public synchronized String getHashFunction() {
+		return hashFunction;
+	}
+
+	public synchronized void setHashFunction(String hashFunction) {
+		this.hashFunction = hashFunction;
 	}
 
 	/**
@@ -333,10 +387,7 @@ public class ChatClientThread extends Thread {
 				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
 			}
 			
-			
 		}
-		
-		
 		
 		JSONObject jsonObj = new JSONObject();
 		try {
