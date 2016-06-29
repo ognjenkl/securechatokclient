@@ -171,11 +171,11 @@ public class ChatClientThread extends Thread {
                 			}
                 			byte[] digest = CryptoImpl.hash(hashFunction, message.getBytes(StandardCharsets.UTF_8));
                 			
-                			System.out.println("temp: message " + message);
-                			System.out.println("temp: hashFunction " + hashFunction);
-                			System.out.println("temp: opmode" + ChatClient.getInstance().getOpModeAsymmetric());
-                			System.out.println("temp: private" + ChatClient.getInstance().getPrivateKeyPair().getPrivate());
-                			System.out.println("temp: digest " + digest);
+//                			System.out.println("temp: message " + message);
+//                			System.out.println("temp: hashFunction " + hashFunction);
+//                			System.out.println("temp: opmode" + ChatClient.getInstance().getOpModeAsymmetric());
+//                			System.out.println("temp: private" + ChatClient.getInstance().getPrivateKeyPair().getPrivate());
+//                			System.out.println("temp: digest " + digest);
                 			
 
                 			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);

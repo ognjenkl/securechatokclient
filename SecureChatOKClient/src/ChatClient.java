@@ -34,6 +34,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.bouncycastle.crypto.Digest;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -303,21 +304,53 @@ public class ChatClient {
 			
 			
 			String publicKeyPath = propServerPublicKeyPath;
-			PublicKey publicKey = CryptoImpl.getPublicKey(publicKeyPath);
+			PublicKey publicKeyServer = CryptoImpl.getPublicKey(publicKeyPath);
 			//System.out.println("drugi public: "+publicKey.toString());
+
+	
 			
+		//envelope
 			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
+			
+			//hash function just for login
+			String hashFunctionLocal = "";
+
+			if(Math.random() < 0.5){
+				hashFunctionLocal = MessageType.SHA256;
+			} else {
+				hashFunctionLocal = MessageType.SHA512;
+			}
 			
 			JSONObject jsonEnvelope = new JSONObject();
 			jsonEnvelope.put(MessageType.KEY, symmetricKeyString);
 			jsonEnvelope.put(MessageType.ALGORITHM, opModeSymmetric);
+			jsonEnvelope.put(MessageType.HASH, hashFunctionLocal);
+			
 			System.out.println("client plain: " + jsonEnvelope.toString());
 			
+			byte[] digest = CryptoImpl.hash(hashFunctionLocal, jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8));
+			
 			byte[] envelopeMaterial = jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8);
-			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKey, envelopeMaterial, true);
+			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKeyServer, envelopeMaterial, true);
 			byte[] envelopeEncoded = Base64.getEncoder().encode(envelope); 
 			String envelopeString = new String(envelopeEncoded, StandardCharsets.UTF_8);
+		//end envelope
+
+		//cipher
+			
+			
+		//end cipher
+			
+		//digital signature
+			
+			
+		//end digital signature
+			
+			JSONObject jsonMessage = new JSONObject();
+			jsonMessage.put(MessageType.ENVELOPE, envelopeString);
+			jsonMessage.put(MessageType.DIGSIG, value);
+			jsonMessage.put(MessageType.CIPHER, value)
 			
 			out.println(envelopeString);
 
