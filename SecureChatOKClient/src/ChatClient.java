@@ -34,6 +34,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.bouncycastle.asn1.ocsp.Request;
 import org.bouncycastle.crypto.Digest;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -238,55 +239,14 @@ public class ChatClient {
 	}
 
 
-	public String login(String usern) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		JSONObject jsonResp = null;
+	public String login(String usern, String password) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
+		String response = "";
+		JSONObject jsonRequest = new JSONObject();
 		try {			
 			//json {"data":"og","from":"og","to":"s","type":"login"}
 			
-			String to = MessageType.SERVER;
-			String from = usern;
-			String type = MessageType.LOGIN;
-			String data = usern;
-			
-			sendMessageLogin(to, from, type, data);
-			
-			String response = in.readLine();
-			String responseDecrypt = decryptMessage(response);
-			
-			jsonResp = new JSONObject(responseDecrypt);
-			//usersList = stringToList(jsonResp.getString("data"),";");
 			
 			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		
-		//return usersList;
-		return jsonResp.toString();
-	}
-	
-	public List<String> stringToList(String message, String delimiter){
-		List<String> list = null;
-		String[] parts = null;
-		if (message.length() > 0 && message.contains(delimiter)){
-			parts = message.split(delimiter);
-			list = new CopyOnWriteArrayList<String>();
-		}
-		
-		for (String part : parts)
-			if(!part.equals(""))
-				list.add(part);
-		
-		return list;
-	}
-	
-	public void sendMessageLogin(String to, String from, String type, String data) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
-		try {
-	
 			if(Math.random() < 0.5){
 				opModeSymmetric = propSymmetricOpModePaddingAes ;
 				symmetricKey = CryptoImpl.generateSecretKeyAES128();
@@ -305,31 +265,27 @@ public class ChatClient {
 			
 			String publicKeyPath = propServerPublicKeyPath;
 			PublicKey publicKeyServer = CryptoImpl.getPublicKey(publicKeyPath);
-			//System.out.println("drugi public: "+publicKey.toString());
-
 	
-			
 		//envelope
 			byte[] symmetricKeyBase64 = Base64.getEncoder().encode(symmetricKey);
 			String symmetricKeyString = new String(symmetricKeyBase64, StandardCharsets.UTF_8);
 			
 			//hash function just for login
-			String hashFunctionLocal = "";
+			String hashFunctionKeyExchangeAndLogin = "";
 
 			if(Math.random() < 0.5){
-				hashFunctionLocal = MessageType.SHA256;
+				hashFunctionKeyExchangeAndLogin = MessageType.SHA256;
 			} else {
-				hashFunctionLocal = MessageType.SHA512;
+				hashFunctionKeyExchangeAndLogin = MessageType.SHA512;
 			}
 			
 			JSONObject jsonEnvelope = new JSONObject();
 			jsonEnvelope.put(MessageType.KEY, symmetricKeyString);
 			jsonEnvelope.put(MessageType.ALGORITHM, opModeSymmetric);
-			jsonEnvelope.put(MessageType.HASH, hashFunctionLocal);
+			jsonEnvelope.put(MessageType.HASH, hashFunctionKeyExchangeAndLogin);
 			
 			System.out.println("client plain: " + jsonEnvelope.toString());
 			
-			byte[] digest = CryptoImpl.hash(hashFunctionLocal, jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8));
 			
 			byte[] envelopeMaterial = jsonEnvelope.toString().getBytes(StandardCharsets.UTF_8);
 			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, publicKeyServer, envelopeMaterial, true);
@@ -337,56 +293,85 @@ public class ChatClient {
 			String envelopeString = new String(envelopeEncoded, StandardCharsets.UTF_8);
 		//end envelope
 
-		//cipher
-			
-			
-		//end cipher
-			
-		//digital signature
-			
-			
-		//end digital signature
-			
-			JSONObject jsonMessage = new JSONObject();
-			jsonMessage.put(MessageType.ENVELOPE, envelopeString);
-			jsonMessage.put(MessageType.DIGSIG, value);
-			jsonMessage.put(MessageType.CIPHER, value)
-			
+			//send envelope with symmetric key
 			out.println(envelopeString);
+			
+			//get response
+			String received = in.readLine();
+			
+			byte[] receivedDecoded = Base64.getDecoder().decode(received.getBytes(StandardCharsets.UTF_8));
+			byte[] receivedDecrypted = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, receivedDecoded, false);
+			String receivedDecryptedDecodedString = new String(Base64.getDecoder().decode(receivedDecrypted), StandardCharsets.UTF_8);
+			
+			JSONObject jsonReceived = new JSONObject(receivedDecryptedDecodedString);
+			String receivedMessage = jsonReceived.getString(MessageType.DATA);
+			String receivedDigitalSignature = jsonReceived.getString(MessageType.DIGSIG);
+			
+			//check if returned string is OK and verify digital signature 
+			if (receivedMessage.equals(MessageType.OK) && CryptoImpl.verifyDigitalSignatureAgainstPlainText(receivedMessage, receivedDigitalSignature, publicKeyServer, opModeAsymmetric, privateKeyPair, opModeSymmetric, symmetricKey, hashFunctionKeyExchangeAndLogin)){
+				System.out.println("Server verified");
+							
+				JSONObject jsonData = new JSONObject();
+				jsonData.put(MessageType.USERNAME, usern);
+				jsonData.put(MessageType.PASSWORD, password);		
+				
+				//digital signature
+				byte[] digest = CryptoImpl.hash(hashFunctionKeyExchangeAndLogin, jsonData.toString().getBytes(StandardCharsets.UTF_8));
+				byte[] digitalSignature = CryptoImpl.asymmetricEncryptDecrypt(opModeAsymmetric, privateKeyPair.getPrivate(), digest, true);
+				String digitalSignatureEncodedString = new String(Base64.getEncoder().encode(digitalSignature), StandardCharsets.UTF_8);
+				
+				//send login
+				JSONObject jsonLoginRequest = new JSONObject();
+				jsonLoginRequest.put(MessageType.TO, MessageType.SERVER);
+				jsonLoginRequest.put(MessageType.FROM, usern);
+				jsonLoginRequest.put(MessageType.TYPE, MessageType.LOGIN);
+				jsonLoginRequest.put(MessageType.DATA, jsonData.toString());
+				jsonLoginRequest.put(MessageType.DIGSIG, digitalSignatureEncodedString);
+				
+				System.out.println("client sent json (prencrypted): " + jsonLoginRequest.toString() );
 
-			
-			String response = "";
-			String predefinedOKTag = MessageType.lOGINOK;
-			
-			//server response
-			response = in.readLine();
-			
-			byte[] responseDecoded = Base64.getDecoder().decode(response.getBytes(StandardCharsets.UTF_8));
-			byte[] responseDecrypt = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, responseDecoded, false);
-			String responseString = new String(responseDecrypt, StandardCharsets.UTF_8);
-			if(responseString.equals(predefinedOKTag)){
-				//System.out.println("Predefined OK: " + requestString);
+				byte[] jsonLoginRequestEncoded = jsonLoginRequest.toString().getBytes(StandardCharsets.UTF_8);
+				byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, jsonLoginRequestEncoded, true);
+				String cipherEncodedString = new String(Base64.getEncoder().encode(cipher), StandardCharsets.UTF_8);
 				
-				JSONObject jsonObj = new JSONObject();
-				jsonObj.put("to", to);
-				jsonObj.put("from", from);
-				jsonObj.put("type", type);
-				jsonObj.put("data", data);
+				//send login request
+				out.println(cipherEncodedString);				
+
+				String resp = in.readLine();
+				response = decryptMessage(resp);
+
 				
-				System.out.println("client sent json (prencrypted): " + jsonObj.toString() );
-				byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(opModeSymmetric, symmetricKey, jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
-				byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
-				String cipherString = new String(cipherEncoded, StandardCharsets.UTF_8);
-				
-				out.println(cipherString);				
-			}
+			} else 
+				System.out.println("Server is NOT verified");			
 			
 			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} 
+
+		return response;
 	}
+	
+	public List<String> stringToList(String message, String delimiter){
+		List<String> list = null;
+		String[] parts = null;
+		if (message.length() > 0 && message.contains(delimiter)){
+			parts = message.split(delimiter);
+			list = new CopyOnWriteArrayList<String>();
+		}
+		
+		for (String part : parts)
+			if(!part.equals(""))
+				list.add(part);
+		
+		return list;
+	}
+	
+	
 	
 	
 	/**
@@ -441,6 +426,10 @@ public class ChatClient {
 				try {
 					
 					username = usernameTextField.getText();
+					char[] password = passwordField.getPassword();
+					//System.out.println("temp password: " + new String(password));
+					byte[] passHash = CryptoImpl.hash(MessageType.HASHPASSWORD, new String(password).getBytes(StandardCharsets.UTF_8));
+					String passHashEncodedString = new String(Base64.getEncoder().encode(passHash), StandardCharsets.UTF_8);
 					
 					File privateKeyPairFile = new File("pki/" + username + "2048.key");
 					
@@ -449,7 +438,7 @@ public class ChatClient {
 					
 					
 						//login - get a list of all logged users and their public keys or null
-						String str = login(username);
+						String str = login(username, passHashEncodedString);
 						
 						JSONObject jsonLogin = new JSONObject(str);
 						JSONObject jsonLoginData = new JSONObject(jsonLogin.getString("data"));
