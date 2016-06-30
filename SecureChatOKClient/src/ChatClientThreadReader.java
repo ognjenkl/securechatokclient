@@ -20,23 +20,7 @@ import secureUtil.MessageType;
 
 public class ChatClientThreadReader extends Thread{
 
-	//Socket socket;
 	BufferedReader in;
-	//String username;
-	
-	//remote clients to which this client is in communication with
-	//ConcurrentHashMap<String, ChatClientThread> remoteClientsInCommunication = null;
-	
-	//included for update on JList list on gui, when new clients log in, gui JList is on this ChatClient thread
-	//ChatClient chatClient;
-
-	public ChatClientThreadReader(){//ChatClient chatClient){
-		//this.socket = chatClient.getSocket();
-		//this.username = chatClient.getUsername();
-		//this.remoteClientsInCommunication = chatClient.getRemoteClientsInCommunication();
-		//this.chatClient = chatClient;
-		
-	}
 	
 	public void run(){
 		try {
@@ -143,11 +127,7 @@ public class ChatClientThreadReader extends Thread{
 					}
 					else
 						System.out.println("Digitalni potpis chatkey NIJE ispravan");
-					
 						
-				} else if (type.equals(MessageType.CHATKEYOK)) {
-					// odgovoro od chatkey treba da se ovdje uhvati kod drugog clienta
-					// da se setuje symmetricKey izmedu dva client-a za secure chat komunikaciju
 				} else {
 					System.out.println("ChatClientReader nepoznat type poruke");
 				}

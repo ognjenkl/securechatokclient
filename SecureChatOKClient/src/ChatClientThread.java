@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -41,10 +40,9 @@ import secureUtil.MessageType;
  */
 public class ChatClientThread extends Thread {
 
-	//Socket socket;
 	PrintWriter out;
 	
-	JFrame frame;// = null;
+	JFrame frame;
 	JPanel panel;
 	JTextField textField;
 	JTextField messageTextField;
@@ -125,8 +123,6 @@ public class ChatClientThread extends Thread {
         panel.add(labelTo);
         messageHistory.setBounds(20, 50, 450, 340);
         messageHistory.setEditable(false);
-        //ne radi
-        //messageHistory.setWrapStyleWord(true);
         if(message != null)
         	writeToHistory(remoteClient, message);
         panel.add(messageHistory);
@@ -143,18 +139,13 @@ public class ChatClientThread extends Thread {
             	if(e.getSource() == send && !messageTextField.getText().equals("")){
             		try{
             			message = messageTextField.getText();
-                		//sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHAT, message);
                 		
                 		if(symmetricKeyChat == null){
-                			
-                			//byte[] tempSymmetrickey = null;
                 			if(Math.random() < 0.5){
                 				opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePaddingAes();
-                				//tempSymmetrickey = CryptoImpl.generateSecretKeyAES128();
                 				symmetricKeyChat = CryptoImpl.generateSecretKeyAES128();
                 			} else {
                 				 opModeSymmetric = ChatClient.getInstance().getPropSymmetricOpModePadding3Des();
-                				 //tempSymmetrickey = CryptoImpl.generateDESede168Key();
                 				 symmetricKeyChat = CryptoImpl.generateDESede168Key();
                 			}
                 			
@@ -171,13 +162,6 @@ public class ChatClientThread extends Thread {
                 			}
                 			byte[] digest = CryptoImpl.hash(hashFunction, message.getBytes(StandardCharsets.UTF_8));
                 			
-//                			System.out.println("temp: message " + message);
-//                			System.out.println("temp: hashFunction " + hashFunction);
-//                			System.out.println("temp: opmode" + ChatClient.getInstance().getOpModeAsymmetric());
-//                			System.out.println("temp: private" + ChatClient.getInstance().getPrivateKeyPair().getPrivate());
-//                			System.out.println("temp: digest " + digest);
-                			
-
                 			byte[] digitalSignatur = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), ChatClient.getInstance().getPrivateKeyPair().getPrivate(), digest, true);
                 			String digitalSignaturString = new String(Base64.getEncoder().encode(digitalSignatur), StandardCharsets.UTF_8);
                 			
@@ -191,12 +175,10 @@ public class ChatClientThread extends Thread {
                 			byte[] envelope = CryptoImpl.asymmetricEncryptDecrypt(ChatClient.getInstance().getOpModeAsymmetric(), remotePublicKey, jsonChatKeyEncoded, true);
                 			String envelopeString = new String(Base64.getEncoder().encode(envelope), StandardCharsets.UTF_8);
                 			
-                			
                 			JSONObject jsonMessage = new JSONObject();
                 			jsonMessage.put(MessageType.ENVELOPE, envelopeString);
                 			jsonMessage.put(MessageType.DIGSIG, digitalSignaturString);
                 			jsonMessage.put(MessageType.CIPHER, cipherString);
-                			
                 			
                 			sendMessage(remoteClient, ChatClient.getInstance().getUsername(), MessageType.CHATKEY, jsonMessage.toString());
                 		} else{
@@ -246,7 +228,6 @@ public class ChatClientThread extends Thread {
         frame.toFront();
         
 	}
-	
 	
 	
 	

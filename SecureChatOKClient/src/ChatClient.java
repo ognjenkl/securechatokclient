@@ -427,7 +427,6 @@ public class ChatClient {
 					
 					username = usernameTextField.getText();
 					char[] password = passwordField.getPassword();
-					//System.out.println("temp password: " + new String(password));
 					byte[] passHash = CryptoImpl.hash(MessageType.HASHPASSWORD, new String(password).getBytes(StandardCharsets.UTF_8));
 					String passHashEncodedString = new String(Base64.getEncoder().encode(passHash), StandardCharsets.UTF_8);
 					
@@ -529,9 +528,7 @@ public class ChatClient {
 
 					cct.setRemotePublicKey(usersAndPublicKeys.get(remoteUser));
 					cct.start();
-				
 				}
-				
 			}
 		});
 		
@@ -568,7 +565,5 @@ public class ChatClient {
 
 	}
 	
-
-
 	
 }
