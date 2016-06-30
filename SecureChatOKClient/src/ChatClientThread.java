@@ -288,10 +288,10 @@ public class ChatClientThread extends Thread {
 	public void sendMessage(String to, String from, String type, String data){
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("to", to);
-			jsonObj.put("from", from);
-			jsonObj.put("type", type);
-			jsonObj.put("data", data);
+			jsonObj.put(MessageType.TO, to);
+			jsonObj.put(MessageType.FROM, from);
+			jsonObj.put(MessageType.TYPE, type);
+			jsonObj.put(MessageType.DATA, data);
 			
 			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
 			byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
@@ -327,10 +327,10 @@ public class ChatClientThread extends Thread {
 		
 		JSONObject jsonObj = new JSONObject();
 		try {
-			jsonObj.put("to", to);
-			jsonObj.put("from", from);
-			jsonObj.put("type", type);
-			jsonObj.put("data", data);
+			jsonObj.put(MessageType.TO, to);
+			jsonObj.put(MessageType.FROM, from);
+			jsonObj.put(MessageType.TYPE, type);
+			jsonObj.put(MessageType.DATA, data);
 			
 			byte[] cipher = CryptoImpl.symmetricEncryptDecrypt(ChatClient.getInstance().getOpModeSymmetric(), ChatClient.getInstance().getSymmetricKey(), jsonObj.toString().getBytes(StandardCharsets.UTF_8), true);
 			byte[] cipherEncoded = Base64.getEncoder().encode(cipher);
