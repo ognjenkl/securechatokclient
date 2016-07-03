@@ -1,5 +1,7 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -30,12 +32,11 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import org.bouncycastle.asn1.ocsp.Request;
-import org.bouncycastle.crypto.Digest;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -232,20 +233,19 @@ public class ChatClient {
 			startChatClientLoginGUI();
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Server nedostupan");
+			JFrame frame = new JFrame();
+			JOptionPane.showMessageDialog(frame, "Server nedostupan.");
+			frame.dispose();
 		} 
 		
 	}
 
 
-	public String login(String usern, String password) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException{
+	public String login(String usern, String password) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException{
 		String response = "";
-		JSONObject jsonRequest = new JSONObject();
 		try {			
 			//json {"data":"og","from":"og","to":"s","type":"login"}
-			
-			
 			
 			if(Math.random() < 0.5){
 				opModeSymmetric = propSymmetricOpModePaddingAes ;
@@ -345,10 +345,7 @@ public class ChatClient {
 				System.out.println("Server is NOT verified");			
 			
 			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JSONException e) {
+		}  catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
@@ -465,8 +462,10 @@ public class ChatClient {
 					
 					
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					System.out.println("Server nedostupan.");
+					JOptionPane.showMessageDialog(frameLogin, "Server nedostupan.");
+					frameLogin.dispose();
+					//e1.printStackTrace();
 				} catch (InvalidKeyException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();

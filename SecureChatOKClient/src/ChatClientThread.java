@@ -220,6 +220,12 @@ public class ChatClientThread extends Thread {
         		//remoteClientsInCommunication.remove(remoteClient);
         		ChatClient.getInstance().getRemoteClientsInCommunication().remove(remoteClient);
         	}
+        	
+        	@Override
+        	public void windowOpened(WindowEvent e){
+    				messageTextField.requestFocus();
+    			}
+   
 		});
         
 //        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
